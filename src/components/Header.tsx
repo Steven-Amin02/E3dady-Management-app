@@ -116,7 +116,7 @@ export function Header({ onOpenNotifications, onOpenPwaGuide }: HeaderProps) {
               <div className="hidden sm:block text-right leading-tight">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[85px]">
-                    {currentServant?.name.split(' ')[0]}
+                    {currentServant?.name ? currentServant.name.split(' ')[0] : 'حساب الخادم'}
                   </span>
                   {isAdmin && <ShieldCheck className="w-3 h-3 text-amber-500 shrink-0" />}
                 </div>

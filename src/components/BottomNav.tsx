@@ -8,6 +8,7 @@ import {
   Users,
   CalendarDays,
   ShieldCheck,
+  Check
 } from 'lucide-react';
 
 export type TabType = 'followup' | 'attendance' | 'youth' | 'schedule' | 'servants';
@@ -18,15 +19,17 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
-  const { getAbsentAssignedYouth } = useApp();
-  const absentCount = getAbsentAssignedYouth().length;
+  const { dailyFollowUpYouth } = useApp();
+
+  const isTodayFollowUpDone = dailyFollowUpYouth?.alreadyContactedToday;
+  const hasPendingFollowUp = dailyFollowUpYouth && !isTodayFollowUpDone;
 
   const navItems = [
     {
       id: 'followup' as TabType,
       label: 'الافتقاد',
       icon: HeartHandshake,
-      badge: absentCount > 0 ? absentCount : null,
+      badge: isTodayFollowUpDone ? 'done' : hasPendingFollowUp ? 1 : null,
     },
     {
       id: 'attendance' as TabType,
@@ -81,9 +84,14 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
                   />
 
                   {/* Badge */}
-                  {item.badge != null && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900 animate-bounce-in">
-                      {item.badge > 9 ? '9+' : item.badge}
+                  {item.badge === 'done' && (
+                    <span className="absolute -top-1.5 -right-2 w-[17px] h-[17px] rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900 animate-bounce-in">
+                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    </span>
+                  )}
+                  {typeof item.badge === 'number' && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900 animate-bounce-in">
+                      {item.badge}
                     </span>
                   )}
                 </div>

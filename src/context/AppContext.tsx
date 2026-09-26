@@ -1,9 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Servant, Youth, Attendance, ServiceSchedule, AttendanceStatus, YouthWithDetails } from '@/types/database';
+import { Servant, Youth, Attendance, ServiceSchedule, AttendanceStatus, YouthWithDetails, PastoralOutcomeCategory } from '@/types/database';
 import { INITIAL_SERVANTS, INITIAL_YOUTH, INITIAL_SCHEDULES, INITIAL_ATTENDANCE } from '@/lib/mockData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { selectDailyFollowUpYouth, DailyFollowUpCandidate } from '@/lib/followUpRotation';
+import { evaluateYouthPastoralRisk } from '@/lib/pastoralAnalytics';
+import { toLocalDateString } from '@/lib/utils';
 
 interface AppContextType {
   servants: Servant[];
@@ -21,7 +24,7 @@ interface AppContextType {
   addYouth: (data: Omit<Youth, 'id' | 'created_at'>) => Promise<Youth>;
   updateYouth: (id: string, updates: Partial<Youth>) => Promise<void>;
   deleteYouth: (id: string) => Promise<void>;
-  // Attendance
+  // Attendance (Shared)
   saveAttendance: (records: { youth_id: string; session_date: string; status: AttendanceStatus }[]) => Promise<void>;
   // Schedule CRUD
   addSchedule: (data: Omit<ServiceSchedule, 'id' | 'created_at'>) => Promise<ServiceSchedule>;
@@ -31,9 +34,16 @@ interface AppContextType {
   addServant: (data: Omit<Servant, 'id' | 'created_at'>) => Promise<Servant>;
   updateServant: (id: string, updates: Partial<Servant>) => Promise<void>;
   deleteServant: (id: string) => Promise<void>;
-  // Helpers
+  // Helpers & Follow-up rotation
   getYouthWithDetails: (youthItem: Youth) => YouthWithDetails;
   getAbsentAssignedYouth: (servantId?: string) => YouthWithDetails[];
+  dailyFollowUpYouth: DailyFollowUpCandidate | null;
+  markYouthContacted: (
+    youthId: string,
+    method?: 'call' | 'whatsapp',
+    notes?: string,
+    outcome?: PastoralOutcomeCategory
+  ) => Promise<void>;
   resetDataToDefaults: () => void;
   contactedYouthIds: string[];
   toggleContactedYouth: (youthId: string) => void;
@@ -45,14 +55,12 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function calculateLastFriday(fromDate = new Date()): string {
   const d = new Date(fromDate);
   const day = d.getDay(); // 0 is Sunday, 5 is Friday
-  // Diff to previous Friday
   let diff = (day + 7 - 5) % 7;
   if (diff === 0) {
-    // If today is Friday, let's treat last Friday as 7 days ago if morning, or today
     diff = 7;
   }
   d.setDate(d.getDate() - diff);
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(d);
 }
 
 // Helper to calculate upcoming Friday
@@ -61,7 +69,7 @@ export function calculateNextFriday(fromDate = new Date()): string {
   const day = d.getDay(); // 0 is Sunday, 5 is Friday
   const diff = (5 - day + 7) % 7;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(d);
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -69,49 +77,148 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [youth, setYouth] = useState<Youth[]>(INITIAL_YOUTH);
   const [attendance, setAttendance] = useState<Attendance[]>(INITIAL_ATTENDANCE);
   const [schedules, setSchedules] = useState<ServiceSchedule[]>(INITIAL_SCHEDULES);
-  const [currentServant, setCurrentServant] = useState<Servant | null>(INITIAL_SERVANTS[0]); // Defaults to Admin
+  const [currentServant, setCurrentServant] = useState<Servant | null>(INITIAL_SERVANTS[0] || null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [contactedYouthIds, setContactedYouthIds] = useState<string[]>([]);
 
   // Fixed Friday references for realistic attendance
-  // Defaulting to the latest recorded Friday in our dataset
-  const lastFridayDate = useMemo(() => '2026-09-25', []);
-  const nextFridayDate = useMemo(() => '2026-10-02', []);
+  const lastFridayDate = useMemo(() => calculateLastFriday(), []);
+  const nextFridayDate = useMemo(() => calculateNextFriday(), []);
 
   // Initialize data: Instant Local-First Hydration (0ms perceived load) + SWR Supabase fetch
   useEffect(() => {
-    // Step 1: Synchronous LocalStorage hydration (instant UI paint)
     if (typeof window !== 'undefined') {
       try {
-        const savedServants = localStorage.getItem('e3dady_servants');
-        const savedYouth = localStorage.getItem('e3dady_youth');
-        const savedAttendance = localStorage.getItem('e3dady_attendance');
-        const savedSchedules = localStorage.getItem('e3dady_schedules');
-        const savedServantId = localStorage.getItem('e3dady_active_servant_id');
-        const savedContacted = localStorage.getItem('e3dady_contacted');
+        const CURRENT_VERSION = 'v5_stage3_pastoral_triage';
+        const version = localStorage.getItem('e3dady_data_version');
 
-        if (savedServants) setServants(JSON.parse(savedServants));
-        if (savedYouth) setYouth(JSON.parse(savedYouth));
-        if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
-        if (savedSchedules) setSchedules(JSON.parse(savedSchedules));
-        if (savedContacted) setContactedYouthIds(JSON.parse(savedContacted));
+        if (version !== CURRENT_VERSION) {
+          localStorage.removeItem('e3dady_servants');
+          localStorage.removeItem('e3dady_youth');
+          localStorage.removeItem('e3dady_attendance');
+          localStorage.removeItem('e3dady_schedules');
+          localStorage.removeItem('e3dady_active_servant_id');
+          localStorage.removeItem('e3dady_contacted');
+          localStorage.setItem('e3dady_data_version', CURRENT_VERSION);
 
-        if (savedServants) {
-          const list = JSON.parse(savedServants);
-          const found = list.find((s: Servant) => s.id === savedServantId);
-          setCurrentServant(found || list[0]);
-          setIsLoading(false); // Immediate 0ms paint from cache!
+          setServants(INITIAL_SERVANTS);
+          setYouth(INITIAL_YOUTH);
+          setAttendance(INITIAL_ATTENDANCE);
+          setSchedules(INITIAL_SCHEDULES);
+          setCurrentServant(INITIAL_SERVANTS[0] || null);
+
+          localStorage.setItem('e3dady_servants', JSON.stringify(INITIAL_SERVANTS));
+          localStorage.setItem('e3dady_youth', JSON.stringify(INITIAL_YOUTH));
+          localStorage.setItem('e3dady_attendance', JSON.stringify(INITIAL_ATTENDANCE));
+          localStorage.setItem('e3dady_schedules', JSON.stringify(INITIAL_SCHEDULES));
+          if (INITIAL_SERVANTS[0]) {
+            localStorage.setItem('e3dady_active_servant_id', INITIAL_SERVANTS[0].id);
+          }
+        } else {
+          const savedServants = localStorage.getItem('e3dady_servants');
+          const savedYouth = localStorage.getItem('e3dady_youth');
+          const savedAttendance = localStorage.getItem('e3dady_attendance');
+          const savedSchedules = localStorage.getItem('e3dady_schedules');
+          const savedServantId = localStorage.getItem('e3dady_active_servant_id');
+          const savedContacted = localStorage.getItem('e3dady_contacted');
+
+          if (savedServants) {
+            try {
+              const list: Servant[] = JSON.parse(savedServants);
+              if (Array.isArray(list) && list.length > 0) {
+                setServants(list);
+                const found = list.find((s: Servant) => s.id === savedServantId);
+                setCurrentServant(found || list[0] || null);
+              }
+            } catch (_) {}
+          }
+
+          if (savedYouth) {
+            try {
+              const list = JSON.parse(savedYouth);
+              if (Array.isArray(list) && list.length > 0) {
+                setYouth(list);
+              } else {
+                setYouth(INITIAL_YOUTH);
+              }
+            } catch (_) {
+              setYouth(INITIAL_YOUTH);
+            }
+          }
+
+          if (savedAttendance) {
+            try {
+              const list = JSON.parse(savedAttendance);
+              if (Array.isArray(list) && list.length > 0) {
+                let needsSave = false;
+                const converted = list.map((a: Attendance) => {
+                  if (a.session_date === '2026-09-24') {
+                    needsSave = true;
+                    return {
+                      ...a,
+                      session_date: '2026-09-25',
+                      id: a.id ? a.id.replace('2026-09-24', '2026-09-25') : `att-2026-09-25-${a.youth_id?.slice(-4) || 'mig'}`,
+                    };
+                  }
+                  return a;
+                });
+
+                // Deduplicate so each youth has at most one record per session_date
+                const seen = new Set<string>();
+                const migratedList: Attendance[] = [];
+                for (const item of converted) {
+                  const key = `${item.youth_id}_${item.session_date}`;
+                  if (!seen.has(key)) {
+                    seen.add(key);
+                    migratedList.push(item);
+                  } else {
+                    needsSave = true;
+                  }
+                }
+
+                setAttendance(migratedList);
+                if (needsSave) {
+                  localStorage.setItem('e3dady_attendance', JSON.stringify(migratedList));
+                }
+              } else {
+                setAttendance(INITIAL_ATTENDANCE);
+              }
+            } catch (_) {
+              setAttendance(INITIAL_ATTENDANCE);
+            }
+          }
+
+          if (savedSchedules) {
+            try {
+              const list = JSON.parse(savedSchedules);
+              if (Array.isArray(list) && list.length > 0) {
+                setSchedules(list);
+              } else {
+                setSchedules(INITIAL_SCHEDULES);
+              }
+            } catch (_) {
+              setSchedules(INITIAL_SCHEDULES);
+            }
+          }
+
+          if (savedContacted) {
+            try {
+              setContactedYouthIds(JSON.parse(savedContacted));
+            } catch (_) {}
+          }
         }
+
+        setIsLoading(false);
       } catch (err) {
         console.warn('Local cache read error:', err);
+        setIsLoading(false);
       }
     }
 
-    // Step 2: Non-blocking background fetch with stripped columns
+    // Step 2: Non-blocking background fetch from Supabase
     async function syncRemoteData() {
       if (isSupabaseConfigured && supabase) {
         try {
-          // Optimized queries: fetch ONLY essential columns, limit attendance to recent sessions
           const [sRes, yRes, aRes, scRes] = await Promise.all([
             supabase
               .from('servants')
@@ -119,13 +226,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .order('name'),
             supabase
               .from('youth')
-              .select('id, name, phone, school_year, assigned_servant_id, notes')
+              .select('id, name, phone, school_year, assigned_servant_id, notes, last_contacted_at')
               .order('name'),
             supabase
               .from('attendance')
               .select('id, youth_id, session_date, status, recorded_by')
               .order('session_date', { ascending: false })
-              .limit(300),
+              .limit(500),
             supabase
               .from('service_schedules')
               .select('id, date, speaker_servant_id, lesson_title, activity_notes')
@@ -186,6 +293,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // 1-Person Daily Follow-Up Selection
+  const dailyFollowUpYouth = useMemo(() => {
+    if (!currentServant) return null;
+    return selectDailyFollowUpYouth(youth, attendance, currentServant.id);
+  }, [youth, attendance, currentServant]);
+
+  // Mark Youth Contacted Action
+  const markYouthContacted = useCallback(
+    async (
+      youthId: string,
+      method: 'call' | 'whatsapp' = 'call',
+      notes: string = '',
+      outcome?: PastoralOutcomeCategory
+    ) => {
+      const nowIso = new Date().toISOString();
+      const todayDate = nowIso.split('T')[0];
+
+      // Optimistic state update
+      setYouth((prev) =>
+        prev.map((y) => (y.id === youthId ? { ...y, last_contacted_at: nowIso } : y))
+      );
+
+      setContactedYouthIds((prev) =>
+        prev.includes(youthId) ? prev : [...prev, youthId]
+      );
+
+      // Save locally to follow_up_logs in localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const storedLogs = JSON.parse(localStorage.getItem('e3dady_follow_up_logs') || '[]');
+          storedLogs.unshift({
+            id: 'log_' + Date.now(),
+            youth_id: youthId,
+            servant_id: currentServant?.id || null,
+            contact_date: todayDate,
+            method,
+            notes,
+            outcome,
+            created_at: nowIso,
+          });
+          localStorage.setItem('e3dady_follow_up_logs', JSON.stringify(storedLogs.slice(0, 100)));
+        } catch (_) {}
+      }
+
+      // Supabase remote sync
+      if (isSupabaseConfigured && supabase && currentServant) {
+        try {
+          await Promise.all([
+            supabase
+              .from('youth')
+              .update({ last_contacted_at: nowIso })
+              .eq('id', youthId),
+            supabase
+              .from('follow_up_logs')
+              .insert([
+                {
+                  youth_id: youthId,
+                  servant_id: currentServant.id,
+                  contact_date: todayDate,
+                  method: method,
+                  notes: notes,
+                  ...(outcome ? { outcome } : {}),
+                },
+              ]),
+          ]);
+        } catch (err) {
+          console.warn('Supabase markYouthContacted sync warning:', err);
+        }
+      }
+    },
+    [currentServant]
+  );
+
   // YOUTH CRUD
   const addYouth = useCallback(async (data: Omit<Youth, 'id' | 'created_at'>): Promise<Youth> => {
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'y_' + Date.now();
@@ -195,20 +375,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString(),
     };
 
+    setYouth((prev) => [...prev, newYouth]);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: inserted, error } = await supabase.from('youth').insert([newYouth]).select().single();
-        if (error) throw error;
-        if (inserted) {
-          setYouth((prev) => [inserted, ...prev]);
-          return inserted;
-        }
+        const { data: inserted } = await supabase.from('youth').insert([newYouth]).select().single();
+        if (inserted) return inserted;
       } catch (err) {
         console.error('Supabase addYouth error:', err);
       }
     }
-
-    setYouth((prev) => [newYouth, ...prev]);
     return newYouth;
   }, []);
 
@@ -237,7 +413,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ATTENDANCE BULK SAVE
+  // ATTENDANCE BULK SAVE (SHARED FOR ALL SERVANTS)
   const saveAttendance = useCallback(
     async (records: { youth_id: string; session_date: string; status: AttendanceStatus }[]) => {
       const recordedBy = currentServant?.id || null;
@@ -347,19 +523,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString(),
     };
 
+    setServants((prev) => [...prev, newServant]);
+
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: inserted } = await supabase.from('servants').insert([newServant]).select().single();
-        if (inserted) {
-          setServants((prev) => [...prev, inserted]);
-          return inserted;
-        }
+        if (inserted) return inserted;
       } catch (err) {
         console.error('Supabase addServant error:', err);
       }
     }
-
-    setServants((prev) => [...prev, newServant]);
     return newServant;
   }, []);
 
@@ -397,7 +570,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const assignedServant = servants.find((s) => s.id === youthItem.assigned_servant_id) || null;
       const memberAttendance = attendance.filter((a) => a.youth_id === youthItem.id);
 
-      // Sort sessions descending
       const sorted = [...memberAttendance].sort((a, b) => b.session_date.localeCompare(a.session_date));
       const lastSession = sorted[0];
 
@@ -413,6 +585,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const totalSessions = memberAttendance.length;
       const presentSessions = memberAttendance.filter((a) => a.status === 'present').length;
       const attendanceRate = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
+      const triageResult = evaluateYouthPastoralRisk(youthItem, attendance);
 
       return {
         ...youthItem,
@@ -422,6 +595,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         total_sessions: totalSessions,
         present_sessions: presentSessions,
         attendance_rate: attendanceRate,
+        triage_category: triageResult.category,
       };
     },
     [servants, attendance]
@@ -432,14 +606,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetServantId = servantId || currentServant?.id;
       if (!targetServantId) return [];
 
-      // Filter youth assigned to this servant (or all youth if admin wants to see all, but per prompt:
-      // "A personalized daily home view for each logged-in servant showing assigned youth who were absent in the last Friday meeting.")
       const myYouth = youth.filter((y) => y.assigned_servant_id === targetServantId);
 
       return myYouth
         .map(getYouthWithDetails)
         .filter((yd) => {
-          // Check if absent on last Friday
           const lastAtt = attendance.find(
             (a) => a.youth_id === yd.id && a.session_date === lastFridayDate
           );
@@ -489,6 +660,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteServant,
         getYouthWithDetails,
         getAbsentAssignedYouth,
+        dailyFollowUpYouth,
+        markYouthContacted,
         resetDataToDefaults,
         contactedYouthIds,
         toggleContactedYouth,

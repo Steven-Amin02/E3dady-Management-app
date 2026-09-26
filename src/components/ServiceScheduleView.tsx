@@ -17,6 +17,7 @@ import {
   CheckCircle,
   ShieldAlert,
 } from 'lucide-react';
+import { Portal } from '@/components/Portal';
 
 export function ServiceScheduleView() {
   const {
@@ -216,122 +217,137 @@ export function ServiceScheduleView() {
 
       {/* Modal Add / Edit Schedule */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 font-cairo">
-                {editingSchedule ? 'تعديل موعد الاجتماع' : 'إضافة موعد جديد لجدول الخدمة'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  تاريخ الجمعة *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  عنوان الموضوع / الدرس الروحي *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: كيف أختار صديقي الحقيقي؟"
-                  value={formData.lesson_title}
-                  onChange={(e) => setFormData({ ...formData, lesson_title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  الخادم المتكلم
-                </label>
-                <select
-                  value={formData.speaker_servant_id}
-                  onChange={(e) => setFormData({ ...formData, speaker_servant_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="">غير محدد</option>
-                  {servants.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  فقرات إضافية / مسابقات / ألعاب
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="ورشة عمل، تدريب ترنيمة جديدة، دوري كرة..."
-                  value={formData.activity_notes}
-                  onChange={(e) => setFormData({ ...formData, activity_notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500 font-tajawal"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden">
+              <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 font-cairo">
+                  {editingSchedule ? 'تعديل موعد الاجتماع' : 'إضافة موعد جديد لجدول الخدمة'}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
                 >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md shadow-amber-600/20"
-                >
-                  {editingSchedule ? 'حفظ التعديلات' : 'إضافة للجدول'}
+                  ✕
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 overflow-y-auto space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      تاريخ الجمعة *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      عنوان الموضوع / الدرس الروحي *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="مثال: كيف أختار صديقي الحقيقي؟"
+                      value={formData.lesson_title}
+                      onChange={(e) => setFormData({ ...formData, lesson_title: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      الخادم المتكلم
+                    </label>
+                    <select
+                      value={formData.speaker_servant_id}
+                      onChange={(e) => setFormData({ ...formData, speaker_servant_id: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    >
+                      <option value="">غير محدد</option>
+                      {servants.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      فقرات إضافية / مسابقات / ألعاب
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="ورشة عمل، تدريب ترنيمة جديدة، دوري كرة..."
+                      value={formData.activity_notes}
+                      onChange={(e) => setFormData({ ...formData, activity_notes: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none font-tajawal resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 p-4 pt-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md shadow-amber-600/20 active:scale-95"
+                  >
+                    {editingSchedule ? 'حفظ التعديلات' : 'إضافة للجدول'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-3">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
-              حذف هذا الاجتماع من الجدول؟
-            </h4>
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                className="px-4 py-2 rounded-2xl bg-rose-600 text-white text-xs font-bold shadow-md"
-              >
-                تأكيد الحذف
-              </button>
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-3 my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 mx-auto flex items-center justify-center text-xl">
+                ⚠️
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
+                حذف هذا الاجتماع من الجدول؟
+              </h4>
+              <p className="text-xs text-slate-500 font-tajawal">
+                سيتم مسح بيانات هذا الأسبوع من الخطة السنوية.
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteId(null)}
+                  className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(deleteId)}
+                  className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 active:scale-95 transition-all"
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

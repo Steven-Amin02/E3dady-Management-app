@@ -1,5 +1,5 @@
-// Ultra-Lightweight Native Service Worker for E3dady PWA (Zero Workbox bloat)
-const CACHE_NAME = 'e3dady-v2';
+// Ultra-Lightweight Native Service Worker for E3dady PWA
+const CACHE_NAME = 'e3dady-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -39,7 +39,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Bypass non-GET requests and Supabase REST calls (database handled via client-side store)
+  // In localhost or local development, bypass SW caching completely so HMR and code changes are fresh
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname.startsWith('192.168.')
+  ) {
+    return;
+  }
+
+  // Bypass non-GET requests and Supabase REST calls
   if (request.method !== 'GET' || url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/')) {
     return;
   }

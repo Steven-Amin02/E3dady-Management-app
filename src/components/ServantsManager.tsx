@@ -15,6 +15,7 @@ import {
   LogIn,
   CheckCircle,
 } from 'lucide-react';
+import { Portal } from '@/components/Portal';
 
 export function ServantsManager() {
   const {
@@ -257,115 +258,124 @@ export function ServantsManager() {
 
       {/* ── Add/Edit Modal ────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-card-lg overflow-hidden animate-slide-up">
-            <div className="h-1 bg-gradient-to-r from-indigo-500 to-sky-500" />
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-indigo-500 to-sky-500 shrink-0" />
 
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
-                {editingServant ? 'تعديل بيانات الخادم' : 'إضافة خادم جديد'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  الاسم الكامل *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: م/ مارك عادل"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  رقم الهاتف *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  dir="ltr"
-                  placeholder="012XXXXXXXX"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  الدور والصلاحية
-                </label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as ServantRole })}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                >
-                  <option value="servant">خادم — تسجيل حضور وافتقاد</option>
-                  <option value="admin">أمين خدمة — إدارة كاملة</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-1">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
+                  {editingServant ? 'تعديل بيانات الخادم' : 'إضافة خادم جديد'}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all shadow-sm shadow-indigo-600/25 active:scale-95"
-                >
-                  {editingServant ? 'حفظ التعديلات' : 'إضافة الخادم'}
+                  ✕
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 overflow-y-auto space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      الاسم الكامل *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="مثال: م/ مارك عادل"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      رقم الهاتف *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      dir="ltr"
+                      placeholder="012XXXXXXXX"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      الدور والصلاحية
+                    </label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value as ServantRole })}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="servant">خادم — تسجيل حضور وافتقاد</option>
+                      <option value="admin">أمين خدمة — إدارة كاملة</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 p-4 pt-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all shadow-sm shadow-indigo-600/25 active:scale-95"
+                  >
+                    {editingServant ? 'حفظ التعديلات' : 'إضافة الخادم'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* ── Delete Confirm Modal ──────────────────── */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-card-lg text-center space-y-3 animate-zoom-in">
-            <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-2xl">
-              🗑️
-            </div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
-              حذف هذا الخادم؟
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-tajawal leading-relaxed">
-              المخدومون المسندون له سيصبحون غير محددين حتى يتم إعادة توزيعهم.
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-1">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-sm shadow-rose-600/25 active:scale-95"
-              >
-                تأكيد الحذف
-              </button>
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-3 my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-2xl">
+                🗑️
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
+                حذف هذا الخادم؟
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-tajawal leading-relaxed">
+                المخدومون المسندون له سيصبحون غير محددين حتى يتم إعادة توزيعهم.
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeleteId(null)}
+                  className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(deleteId)}
+                  className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-sm shadow-rose-600/25 active:scale-95"
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

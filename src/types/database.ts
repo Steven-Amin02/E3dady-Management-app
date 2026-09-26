@@ -2,6 +2,21 @@ export type ServantRole = 'admin' | 'servant';
 export type SchoolYear = '1st Prep' | '2nd Prep' | '3rd Prep';
 export type AttendanceStatus = 'present' | 'absent' | 'excused';
 
+export type PastoralTriageCategory =
+  | 'critical_dropout'    // 🔴 3+ consecutive absences
+  | 'newcomer_risk'       // 🟠 joined recently, attended 1-2, missed last 2
+  | 'fading_regular'      // 🟡 historical engagement dropped recently
+  | 'regular_active';     // 🟢 regular attendee
+
+export type PastoralOutcomeCategory =
+  | 'exams_study'         // 📚 امتحانات ومذاكرة
+  | 'illness_health'      // 🩺 ظروف صحية ومرض
+  | 'travel_relocation'   // 🚗 سفر وخارج المحافظة
+  | 'spiritual_lukewarm'  // 🕊️ فتور روحي وبعد عن الكنيسة
+  | 'unreachable'         // 📵 لم يرد / مغلق
+  | 'family_circumstance' // 🏠 ظروف أسرية وخاصة
+  | 'encouraged_attending';// ✅ تواصل مشجع ومستعد للحضور
+
 export interface Servant {
   id: string;
   name: string;
@@ -17,6 +32,18 @@ export interface Youth {
   school_year: SchoolYear;
   assigned_servant_id: string | null;
   notes: string;
+  last_contacted_at?: string | null;
+  created_at?: string;
+}
+
+export interface FollowUpLog {
+  id: string;
+  youth_id: string;
+  servant_id: string;
+  contact_date: string; // ISO date 'YYYY-MM-DD'
+  method: 'call' | 'whatsapp';
+  outcome?: PastoralOutcomeCategory;
+  notes?: string;
   created_at?: string;
 }
 
@@ -45,4 +72,7 @@ export interface YouthWithDetails extends Youth {
   total_sessions?: number;
   present_sessions?: number;
   attendance_rate?: number;
+  triage_category?: PastoralTriageCategory;
+  last_follow_up_outcome?: PastoralOutcomeCategory;
 }
+
