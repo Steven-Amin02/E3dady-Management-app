@@ -1,0 +1,26 @@
+{
+  "name": "خدمة إعدادي - كنيستنا",
+  "short_name": "إعدادي",
+  "description": "تطبيق متابعة حضور وافتقاد مخدومي خدمة إعدادي والجدول السنوي",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#082f49",
+  "theme_color": "#0369a1",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

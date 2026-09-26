@@ -1,26 +1,196 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* ─── Brand Colors ─────────────────────────────── */
+    --brand-hue: 204;          /* Sky blue */
+    --gold-hue: 38;            /* Warm gold */
+
+    /* ─── Surface tokens (light) ──────────────────── */
+    --background: 220 25% 96%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 204 88% 38%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 214 28% 93%;
+    --muted-foreground: 215 16% 50%;
+
+    --accent: 38 95% 52%;
+    --accent-foreground: 26 83% 14%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 28% 89%;
+    --input: 214 28% 89%;
+    --ring: 204 88% 38%;
+
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    /* ─── Surface tokens (dark) ──────────────────── */
+    --background: 222 47% 6%;
+    --foreground: 210 40% 97%;
+
+    --card: 222 40% 9%;
+    --card-foreground: 210 40% 97%;
+
+    --popover: 222 40% 9%;
+    --popover-foreground: 210 40% 97%;
+
+    --primary: 204 90% 54%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 15%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 62%;
+
+    --accent: 38 95% 52%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 204 90% 54%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Better focus rings for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring rounded-sm;
+  }
+}
+
+/* ─── Custom Scrollbars ───────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* ─── Glassmorphism helpers ───────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(226, 232, 240, 0.75);
+}
+
+.dark .glass-panel {
+  background: rgba(9, 14, 28, 0.82);
+  border: 1px solid rgba(30, 41, 59, 0.7);
+}
+
+/* ─── App Background Mesh ─────────────────────────── */
+.app-bg {
+  background-color: hsl(220 25% 96%);
+  background-image:
+    radial-gradient(at 30% 0%, hsla(204, 80%, 90%, 0.55) 0px, transparent 55%),
+    radial-gradient(at 85% 10%, hsla(260, 70%, 92%, 0.35) 0px, transparent 45%),
+    radial-gradient(at 5% 80%, hsla(38, 80%, 92%, 0.30) 0px, transparent 45%);
+}
+
+.dark .app-bg {
+  background-color: hsl(222 47% 6%);
+  background-image:
+    radial-gradient(at 30% 0%, hsla(204, 80%, 12%, 0.55) 0px, transparent 55%),
+    radial-gradient(at 85% 10%, hsla(260, 70%, 10%, 0.35) 0px, transparent 45%),
+    radial-gradient(at 5% 80%, hsla(38, 80%, 10%, 0.20) 0px, transparent 45%);
+}
+
+/* ─── Card base style ─────────────────────────────── */
+.card {
+  @apply bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm;
+}
+
+/* ─── Safe Areas ──────────────────────────────────── */
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* ─── Custom utility: scale-102 ──────────────────── */
+@layer utilities {
+  .scale-102 {
+    transform: scale(1.02);
+  }
+
+  /* Shimmer loading skeleton */
+  .skeleton {
+    @apply bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse;
+  }
+
+  /* Inset shadow for avatar / pill backgrounds */
+  .shadow-inset-sm {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Glow utilities */
+  .glow-sky {
+    box-shadow: 0 0 18px -4px rgba(14, 165, 233, 0.45);
+  }
+  .glow-emerald {
+    box-shadow: 0 0 18px -4px rgba(16, 185, 129, 0.40);
+  }
+  .glow-rose {
+    box-shadow: 0 0 18px -4px rgba(244, 63, 94, 0.35);
+  }
+}
+
+/* ─── Tab transition ──────────────────────────────── */
+.tab-content {
+  animation: tab-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
