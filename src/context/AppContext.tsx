@@ -25,7 +25,12 @@ interface AppContextType {
   updateYouth: (id: string, updates: Partial<Youth>) => Promise<void>;
   deleteYouth: (id: string) => Promise<void>;
   // Attendance (Shared)
-  saveAttendance: (records: { youth_id: string; session_date: string; status: AttendanceStatus }[]) => Promise<void>;
+  saveAttendance: (records: { youth_id: string; session_date: string; status: AttendanceStatus }[]) => Promise<{
+    success: boolean;
+    cloudSynced: boolean;
+    count: number;
+    error?: string;
+  }>;
   // Schedule CRUD
   addSchedule: (data: Omit<ServiceSchedule, 'id' | 'created_at'>) => Promise<ServiceSchedule>;
   updateSchedule: (id: string, updates: Partial<ServiceSchedule>) => Promise<void>;
@@ -261,6 +266,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     syncRemoteData();
   }, []);
 
+  // Step 3: Multi-Tab Broadcast & Cross-Window Local Sync
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('e3dady_sync_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'ATTENDANCE_UPDATED' && Array.isArray(event.data?.attendance)) {
+          setAttendance(event.data.attendance);
+        }
+      };
+    } catch (_) {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'e3dady_attendance' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setAttendance(parsed);
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) bc.close();
+    };
+  }, []);
+
+  // Step 4: Real-time Cloud Synchronization (Supabase postgres_changes)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    try {
+      const channel = supabase
+        .channel('attendance_realtime_stream')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'attendance' },
+          (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const updatedRecord = payload.new as Attendance;
+              setAttendance((prev) => {
+                const idx = prev.findIndex(
+                  (a) => a.youth_id === updatedRecord.youth_id && a.session_date === updatedRecord.session_date
+                );
+                if (idx >= 0) {
+                  const copy = [...prev];
+                  copy[idx] = updatedRecord;
+                  return copy;
+                }
+                return [updatedRecord, ...prev];
+              });
+            } else if (payload.eventType === 'DELETE') {
+              const oldRec = payload.old as Partial<Attendance>;
+              if (oldRec.id) {
+                setAttendance((prev) => prev.filter((a) => a.id !== oldRec.id));
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        if (supabase) supabase.removeChannel(channel);
+      };
+    } catch (err) {
+      console.warn('Realtime channel error:', err);
+    }
+  }, []);
+
   // Save to localStorage when state changes (for offline/demo reliability)
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
@@ -419,6 +496,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const recordedBy = currentServant?.id || null;
       const nowIso = new Date().toISOString();
 
+      let latestAttendanceList: Attendance[] = [];
+
       setAttendance((prev) => {
         const updated = [...prev];
         records.forEach((rec) => {
@@ -443,8 +522,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             });
           }
         });
+        latestAttendanceList = updated;
         return updated;
       });
+
+      // 1. Immediately and synchronously persist to localStorage so it is never lost
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('e3dady_attendance', JSON.stringify(latestAttendanceList));
+          // Broadcast to other open tabs/windows
+          try {
+            const bc = new BroadcastChannel('e3dady_sync_channel');
+            bc.postMessage({ type: 'ATTENDANCE_UPDATED', attendance: latestAttendanceList });
+            bc.close();
+          } catch (_) {}
+        } catch (storageErr) {
+          console.warn('LocalStorage save warning:', storageErr);
+        }
+      }
+
+      // 2. Cloud Sync via Supabase
+      let cloudSynced = false;
+      let syncError: string | undefined = undefined;
 
       if (isSupabaseConfigured && supabase) {
         try {
@@ -454,11 +553,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             status: r.status,
             recorded_by: recordedBy,
           }));
-          await supabase.from('attendance').upsert(payload, { onConflict: 'youth_id,session_date' });
-        } catch (err) {
-          console.error('Supabase saveAttendance error:', err);
+
+          const { error } = await supabase
+            .from('attendance')
+            .upsert(payload, { onConflict: 'youth_id,session_date' });
+
+          if (error) {
+            console.error('Supabase saveAttendance error:', error);
+            syncError = error.message;
+          } else {
+            cloudSynced = true;
+          }
+        } catch (err: any) {
+          console.error('Supabase saveAttendance exception:', err);
+          syncError = err?.message || 'Network error';
         }
       }
+
+      return {
+        success: true,
+        cloudSynced,
+        count: records.length,
+        error: syncError,
+      };
     },
     [currentServant]
   );

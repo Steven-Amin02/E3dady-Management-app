@@ -324,3 +324,16 @@ INSERT INTO public.attendance (youth_id, session_date, status, recorded_by) VALU
 ('c3333333-0000-0000-0000-000000000005', '2026-09-25', 'present', '66666666-6666-6666-6666-666666666666'),
 ('c3333333-0000-0000-0000-000000000006', '2026-09-25', 'absent',  '55555555-5555-5555-5555-555555555555'),
 ('c3333333-0000-0000-0000-000000000007', '2026-09-25', 'present', '11111111-1111-1111-1111-111111111111');
+
+-- Enable Supabase Realtime for instant synchronization across servants
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.youth;
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END $$;

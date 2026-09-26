@@ -61,6 +61,7 @@ export function SharedAttendanceTable({ initialDate }: SharedAttendanceTableProp
     nextFridayDate,
     currentServant,
     isAdmin,
+    isSupabase,
   } = useApp();
 
   const [selectedDate, setSelectedDate] = useState<string>(initialDate || lastFridayDate);
@@ -340,7 +341,7 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
     }));
 
     try {
-      await saveAttendance(records);
+      const result = await saveAttendance(records);
       setIsSaving(false);
       setSaveSuccess(true);
       triggerHaptic('success');
@@ -351,7 +352,13 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
         setSaveToast({
           show: true,
           type: 'audit_sync',
-          message: '✓ تم توثيق وحفظ التعديل الاستثنائي في سجل التدقيق التاريخي بنجاح!',
+          message: '✓ تم توثيق وحفظ التعديل الاستثنائي في سجل التدقيق بنجاح!',
+        });
+      } else if (result.cloudSynced) {
+        setSaveToast({
+          show: true,
+          type: 'online_sync',
+          message: '✓ تم حفظ الحضور ومزامنته سحابياً بنجاح لجميع الخدام!',
         });
       } else if (isOffline) {
         setSaveToast({
@@ -359,11 +366,18 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
           type: 'offline_local',
           message: '✓ تم الحفظ محلياً على هاتفك بأمان وسيتم المزامنة تلقائياً عند عودة الاتصال.',
         });
-      } else {
+      } else if (!isSupabase) {
         setSaveToast({
           show: true,
-          type: 'online_sync',
-          message: '✓ تم حفظ الحضور ومزامنته سحابياً بنجاح لجميع الخدام!',
+          type: 'offline_local',
+          message: '✓ تم الحفظ محلياً بأمان على هذا الجهاز (الوضع التجريبي بدون سحابة).',
+        });
+      } else {
+        // Supabase is configured but tables are not yet created in the database
+        setSaveToast({
+          show: true,
+          type: 'offline_local',
+          message: '✓ تم الحفظ محلياً على جهازك! ⚠️ لم تتم المزامنة السحابية: يرجى تنفيذ ملف schema.sql في Supabase.',
         });
       }
 
