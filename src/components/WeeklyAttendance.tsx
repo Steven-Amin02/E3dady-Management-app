@@ -14,7 +14,6 @@ import {
   History,
   CheckCheck,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 export function WeeklyAttendance() {
   const {
@@ -102,7 +101,9 @@ export function WeeklyAttendance() {
       setIsSaving(false);
       setSaveSuccess(true);
       if (stats.attendancePercentage >= 70) {
-        confetti({ particleCount: 80, spread: 70, origin: { y: 0.75 } });
+        import('canvas-confetti').then(({ default: confetti }) => {
+          confetti({ particleCount: 60, spread: 60, origin: { y: 0.75 } });
+        }).catch(() => {});
       }
       setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err) {
@@ -300,7 +301,7 @@ export function WeeklyAttendance() {
           return (
             <div
               key={member.id}
-              className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${bgColor} ${borderColor}`}
+              className={`roster-card relative rounded-2xl border transition-all duration-200 overflow-hidden ${bgColor} ${borderColor}`}
             >
               {/* Left status stripe */}
               <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${stripeColor}`} />

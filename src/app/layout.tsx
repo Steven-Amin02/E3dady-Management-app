@@ -4,17 +4,19 @@ import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const cairo = Cairo({
-  subsets: ["arabic", "latin"],
+  subsets: ["arabic"],
   variable: "--font-cairo",
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "700"],
   display: "swap",
+  preload: true,
 });
 
 const tajawal = Tajawal({
-  subsets: ["arabic", "latin"],
+  subsets: ["arabic"],
   variable: "--font-tajawal",
-  weight: ["400", "500", "700"],
+  weight: ["400", "700"],
   display: "swap",
+  preload: false,
 });
 
 export const viewport: Viewport = {

@@ -1,12 +1,15 @@
-// Progressive Web App Service Worker for E3dady App
-const CACHE_NAME = "e3dady-cache-v1";
+// Ultra-Lightweight Native Service Worker for E3dady PWA (Zero Workbox bloat)
+const CACHE_NAME = 'e3dady-v2';
 const STATIC_ASSETS = [
-  "/",
-  "/manifest.json",
-  "/icons/icon.svg",
+  '/',
+  '/manifest.json',
+  '/icons/icon.svg',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
 ];
 
-self.addEventListener("install", (event) => {
+// Precache essential static shell on install
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
@@ -15,7 +18,8 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+// Purge obsolete cache versions on activate
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
@@ -30,25 +34,65 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  // Navigation preload & cache-first for static, network-first for api
-  if (event.request.mode === "navigate") {
+// High-performance fetch interception
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Bypass non-GET requests and Supabase REST calls (database handled via client-side store)
+  if (request.method !== 'GET' || url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/')) {
+    return;
+  }
+
+  // 1. Navigation requests (HTML documents) -> Stale-While-Revalidate with offline fallback
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match("/");
+      caches.match('/').then((cached) => {
+        const fetchPromise = fetch(request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const copy = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+            }
+            return networkResponse;
+          })
+          .catch(() => cached || caches.match('/'));
+
+        return cached || fetchPromise;
       })
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return (
-        cachedResponse ||
-        fetch(event.request).then((networkResponse) => {
+  // 2. Static Next.js assets, icons, fonts -> Cache-First
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.woff2')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return networkResponse;
-        })
-      );
-    })
+        });
+      })
+    );
+    return;
+  }
+
+  // 3. All other requests -> Network with fallback to cache
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });

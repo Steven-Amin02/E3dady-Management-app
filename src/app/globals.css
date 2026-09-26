@@ -194,3 +194,10 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ─── High-Performance DOM Containment ────────────── */
+/* Skips rendering calculations for off-screen cards; zero RAM waste on low-end devices */
+.roster-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 76px;
+}

@@ -78,17 +78,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const lastFridayDate = useMemo(() => '2026-09-25', []);
   const nextFridayDate = useMemo(() => '2026-10-02', []);
 
-  // Initialize data from Supabase or LocalStorage
+  // Initialize data: Instant Local-First Hydration (0ms perceived load) + SWR Supabase fetch
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
+    // Step 1: Synchronous LocalStorage hydration (instant UI paint)
+    if (typeof window !== 'undefined') {
+      try {
+        const savedServants = localStorage.getItem('e3dady_servants');
+        const savedYouth = localStorage.getItem('e3dady_youth');
+        const savedAttendance = localStorage.getItem('e3dady_attendance');
+        const savedSchedules = localStorage.getItem('e3dady_schedules');
+        const savedServantId = localStorage.getItem('e3dady_active_servant_id');
+        const savedContacted = localStorage.getItem('e3dady_contacted');
+
+        if (savedServants) setServants(JSON.parse(savedServants));
+        if (savedYouth) setYouth(JSON.parse(savedYouth));
+        if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
+        if (savedSchedules) setSchedules(JSON.parse(savedSchedules));
+        if (savedContacted) setContactedYouthIds(JSON.parse(savedContacted));
+
+        if (savedServants) {
+          const list = JSON.parse(savedServants);
+          const found = list.find((s: Servant) => s.id === savedServantId);
+          setCurrentServant(found || list[0]);
+          setIsLoading(false); // Immediate 0ms paint from cache!
+        }
+      } catch (err) {
+        console.warn('Local cache read error:', err);
+      }
+    }
+
+    // Step 2: Non-blocking background fetch with stripped columns
+    async function syncRemoteData() {
       if (isSupabaseConfigured && supabase) {
         try {
+          // Optimized queries: fetch ONLY essential columns, limit attendance to recent sessions
           const [sRes, yRes, aRes, scRes] = await Promise.all([
-            supabase.from('servants').select('*').order('name'),
-            supabase.from('youth').select('*').order('name'),
-            supabase.from('attendance').select('*'),
-            supabase.from('service_schedules').select('*').order('date', { ascending: true }),
+            supabase
+              .from('servants')
+              .select('id, name, phone, role')
+              .order('name'),
+            supabase
+              .from('youth')
+              .select('id, name, phone, school_year, assigned_servant_id, notes')
+              .order('name'),
+            supabase
+              .from('attendance')
+              .select('id, youth_id, session_date, status, recorded_by')
+              .order('session_date', { ascending: false })
+              .limit(300),
+            supabase
+              .from('service_schedules')
+              .select('id, date, speaker_servant_id, lesson_title, activity_notes')
+              .order('date', { ascending: true }),
           ]);
 
           if (sRes.data && sRes.data.length > 0) setServants(sRes.data);
@@ -97,49 +138,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (scRes.data && scRes.data.length > 0) setSchedules(scRes.data);
 
           if (sRes.data && sRes.data.length > 0) {
-            setCurrentServant(sRes.data[0]);
+            setCurrentServant((prev) => {
+              if (!prev) return sRes.data[0];
+              const match = sRes.data.find((s) => s.id === prev.id);
+              return match || sRes.data[0];
+            });
           }
         } catch (err) {
-          console.warn('Supabase fetch failed, falling back to local state:', err);
-        }
-      } else {
-        // Load from LocalStorage if available
-        if (typeof window !== 'undefined') {
-          const savedServants = localStorage.getItem('e3dady_servants');
-          const savedYouth = localStorage.getItem('e3dady_youth');
-          const savedAttendance = localStorage.getItem('e3dady_attendance');
-          const savedSchedules = localStorage.getItem('e3dady_schedules');
-          const savedServantId = localStorage.getItem('e3dady_active_servant_id');
-          const savedContacted = localStorage.getItem('e3dady_contacted');
-
-          if (savedServants) setServants(JSON.parse(savedServants));
-          if (savedYouth) setYouth(JSON.parse(savedYouth));
-          if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
-          if (savedSchedules) setSchedules(JSON.parse(savedSchedules));
-          if (savedContacted) setContactedYouthIds(JSON.parse(savedContacted));
-
-          const activeList = savedServants ? JSON.parse(savedServants) : INITIAL_SERVANTS;
-          const found = activeList.find((s: Servant) => s.id === savedServantId);
-          setCurrentServant(found || activeList[0]);
+          console.warn('Supabase background sync failed, using cached state:', err);
         }
       }
       setIsLoading(false);
     }
 
-    loadData();
+    syncRemoteData();
   }, []);
 
   // Save to localStorage when state changes (for offline/demo reliability)
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
-      localStorage.setItem('e3dady_servants', JSON.stringify(servants));
-      localStorage.setItem('e3dady_youth', JSON.stringify(youth));
-      localStorage.setItem('e3dady_attendance', JSON.stringify(attendance));
-      localStorage.setItem('e3dady_schedules', JSON.stringify(schedules));
-      localStorage.setItem('e3dady_contacted', JSON.stringify(contactedYouthIds));
-      if (currentServant) {
-        localStorage.setItem('e3dady_active_servant_id', currentServant.id);
-      }
+      try {
+        localStorage.setItem('e3dady_servants', JSON.stringify(servants));
+        localStorage.setItem('e3dady_youth', JSON.stringify(youth));
+        localStorage.setItem('e3dady_attendance', JSON.stringify(attendance));
+        localStorage.setItem('e3dady_schedules', JSON.stringify(schedules));
+        localStorage.setItem('e3dady_contacted', JSON.stringify(contactedYouthIds));
+        if (currentServant) {
+          localStorage.setItem('e3dady_active_servant_id', currentServant.id);
+        }
+      } catch (_) {}
     }
   }, [servants, youth, attendance, schedules, currentServant, contactedYouthIds, isLoading]);
 
