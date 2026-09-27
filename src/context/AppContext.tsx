@@ -94,7 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const CURRENT_VERSION = 'v5_stage3_pastoral_triage';
+        const CURRENT_VERSION = 'v6_supabase_sync';
         const version = localStorage.getItem('e3dady_data_version');
 
         if (version !== CURRENT_VERSION) {
