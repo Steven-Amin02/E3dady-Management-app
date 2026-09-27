@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic, schoolYearLabel, formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
+import { formatDateArabic, schoolYearLabel, formatEgyptianPhoneForWhatsApp, getTimeBasedGreeting } from '@/lib/utils';
 import { YouthWithDetails } from '@/types/database';
 import { CrossIcon } from '@/components/CrossIcon';
 import { DailySingleFollowUpCard } from '@/components/DailySingleFollowUpCard';
@@ -33,6 +33,11 @@ export function DailyFollowUp({ onNavigateAttendance }: DailyFollowUpProps) {
   } = useApp();
 
   const [showAllAbsents, setShowAllAbsents] = useState(false);
+  const [greeting, setGreeting] = useState<'صباح الخير' | 'مساء الخير'>('صباح الخير');
+
+  useEffect(() => {
+    setGreeting(getTimeBasedGreeting());
+  }, []);
 
   // Total youth assigned to this servant
   const totalAssignedToMe = youth.filter(
@@ -78,7 +83,7 @@ export function DailyFollowUp({ onNavigateAttendance }: DailyFollowUpProps) {
         {/* Servant greeting */}
         <div className="relative z-10">
           <h2 className="text-xl sm:text-2xl font-black font-cairo leading-snug">
-            صباح الخير<br />
+            {greeting}،<br />
             <span className="text-sky-200">{currentServant?.name || 'يا خادم المسيح'} 🌿</span>
           </h2>
           <p className="text-xs text-sky-100/80 mt-1.5 leading-relaxed font-tajawal max-w-sm">

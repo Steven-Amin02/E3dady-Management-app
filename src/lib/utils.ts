@@ -98,3 +98,13 @@ export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'warning' =
     } catch (_) {}
   }
 }
+
+/**
+ * Returns dynamic Arabic time greeting based on current local hour:
+ * 04:00 - 11:59 -> 'صباح الخير' (Morning)
+ * 12:00 - 03:59 -> 'مساء الخير' (Evening / Night)
+ */
+export function getTimeBasedGreeting(date = new Date()): 'صباح الخير' | 'مساء الخير' {
+  const hour = date.getHours();
+  return hour >= 4 && hour < 12 ? 'صباح الخير' : 'مساء الخير';
+}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic, toLocalDateString, schoolYearLabel, formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
+import { formatDateArabic, toLocalDateString, schoolYearLabel, formatEgyptianPhoneForWhatsApp, getTimeBasedGreeting } from '@/lib/utils';
 import { DailyFollowUpCandidate } from '@/lib/followUpRotation';
 import { MemberSparkline } from '@/components/MemberSparkline';
 import { PastoralOutcomeModal } from '@/components/PastoralOutcomeModal';
@@ -64,15 +64,16 @@ export function DailySingleFollowUpCard({ candidate }: DailySingleFollowUpCardPr
 
   // Personalized Arabic WhatsApp message tailored to triage context
   const formattedDate = formatDateArabic(lastFridayDate);
+  const timeGreeting = getTimeBasedGreeting();
   let messageText = '';
   if (triageCategory === 'critical_dropout') {
     messageText = `سلام ومحبة يا ${youth.name} الغالي ❤️🕊️\nوحشتنا جداً وكل الخدام بيسألوا عليك! مكانك فارق معانا جداً في اجتماع إعدادي بكنيستنا.\nحابب أطمن عليك وعلى صحتك ودراستك، ومستنيك الجمعة القادمة بكل محبة وفرح ✨✝️`;
   } else if (triageCategory === 'newcomer_risk') {
-    messageText = `صباح الخير يا ${youth.name} الحبيب 🌿✨\nفرحنا بوجودك جداً في اللقاءات السابقة، ووحشتنا الجمعة الماضية!\nمستنيينك الجمعة الجاية مجهزين فقرات ومسابقات مميزة علشانك ❤️🕊️`;
+    messageText = `${timeGreeting} يا ${youth.name} الحبيب 🌿✨\nفرحنا بوجودك جداً في اللقاءات السابقة، ووحشتنا الجمعة الماضية!\nمستنيينك الجمعة الجاية مجهزين فقرات ومسابقات مميزة علشانك ❤️🕊️`;
   } else if (isAbsentLastFriday) {
     messageText = `سلام ومحبة يا ${youth.name} الغالي ❤️🕊️\nوحشتنا الجمعة الماضية (${formattedDate}) في اجتماع إعدادي بكنيستنا!\nحابب أطمن عليك وعلى دراستك وأفكرك بميعادنا الجمعة القادمة، مستنيينك بكل فرح ✨✝️`;
   } else {
-    messageText = `صباح الخير يا ${youth.name} الحبيب ❤️🕊️\nأخبارك إيه في دراستك وأيامك؟ حبيت أفتقدك وأطمن عليك وعلى أسرتك الكريمة.\nربنا معاك ويفرح قلبك دايماً، ومستنيك في ميعادنا الجمعة القادمة باجتماع إعدادي ✨✝️`;
+    messageText = `${timeGreeting} يا ${youth.name} الحبيب ❤️🕊️\nأخبارك إيه في دراستك وأيامك؟ حبيت أفتقدك وأطمن عليك وعلى أسرتك الكريمة.\nربنا معاك ويفرح قلبك دايماً، ومستنيك في ميعادنا الجمعة القادمة باجتماع إعدادي ✨✝️`;
   }
 
   const whatsAppUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}` : '#';
