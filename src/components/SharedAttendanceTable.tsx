@@ -42,7 +42,8 @@ import {
   Zap,
   Phone,
   Clock,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
 
@@ -56,6 +57,7 @@ export function SharedAttendanceTable({ initialDate }: SharedAttendanceTableProp
     servants,
     attendance,
     saveAttendance,
+    clearAllAttendance,
     getYouthWithDetails,
     lastFridayDate,
     nextFridayDate,
@@ -76,6 +78,8 @@ export function SharedAttendanceTable({ initialDate }: SharedAttendanceTableProp
 
   // Admin Audit Reason Modal State
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
 
   // Offline / Synced Toast Notification State
   const [saveToast, setSaveToast] = useState<{
@@ -246,6 +250,27 @@ export function SharedAttendanceTable({ initialDate }: SharedAttendanceTableProp
     });
     setLocalStatuses(nextStatuses);
     setSaveSuccess(false);
+  };
+
+  const handleClearAllAttendance = async () => {
+    setIsClearing(true);
+    try {
+      const res = await clearAllAttendance();
+      setIsClearing(false);
+      setIsConfirmClearOpen(false);
+      triggerHaptic('success');
+      setLocalStatuses({});
+      setSaveToast({
+        show: true,
+        type: 'online_sync',
+        message: res.message || 'تم تفريغ كافة سجلات الحضور بنجاح!',
+      });
+      setTimeout(() => setSaveToast((prev) => ({ ...prev, show: false })), 5000);
+    } catch (err) {
+      console.error('Error clearing attendance:', err);
+      setIsClearing(false);
+      setIsConfirmClearOpen(false);
+    }
   };
 
   const getServantName = (servantId: string | null) => {
@@ -828,10 +853,23 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
                 type="button"
                 onClick={clearFiltered}
                 className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1.5 rounded-xl font-cairo flex items-center gap-1"
+                title="إلغاء تحديد هذه الجلسة"
               >
                 <RotateCcw className="w-3 h-3" />
-                تفريغ
+                تفريغ الجلسة
               </button>
+
+              {attendance.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmClearOpen(true)}
+                  className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 font-cairo flex items-center gap-1 active:scale-95 transition-transform"
+                  title="مسح وتصفير كافة سجلات الحضور"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  تصفير الكل
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -839,6 +877,23 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
 
       {/* ── Full Roster List with Fast Single-Tap & Attribution ── */}
       <div className="space-y-2">
+        {/* Empty Attendance Welcome Guidance Banner */}
+        {attendance.length === 0 && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50/50 to-sky-50 dark:from-slate-800/90 dark:to-slate-800/50 border border-sky-200/80 dark:border-slate-700 flex items-start gap-3 shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-cairo">
+                سجل الحضور فارغ وجاهز للتسجيل الجديد ✨
+              </h4>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-tajawal leading-relaxed">
+                يمكنك الآن بدء رصد الحضور الفعلي بسهولة: اختر تاريخ الجمعة المطلوب من الشريط، وحدد حالة كل مخدوم (حاضر / غائب / معتذر) أو اضغط «الكل حاضر»، ثم اضغط على زر «حفظ كشف الحضور المشترك» في الأسفل.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between px-2 text-xs font-bold text-slate-500 font-cairo">
           <span>المخدومين ({filteredYouth.length})</span>
           <span>{isEditingLocked ? 'حالة الحضور (مقفل)' : 'تسجيل الحالة'}</span>
@@ -1108,6 +1163,45 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
           executeSave(category, notes);
         }}
       />
+
+      {/* ── Confirm Clear All Attendance Modal ── */}
+      {isConfirmClearOpen && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="text-center space-y-1.5">
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100 font-cairo">
+                  تأكيد تصفير كافة بيانات الحضور
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-tajawal leading-relaxed">
+                  هل أنت متأكد من رغبتك في تفريغ ومسح كافة سجلات الحضور السابقة بالكامل؟ سيتم تصفير السجل للبدء من جديد.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isClearing}
+                  onClick={handleClearAllAttendance}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold font-cairo transition-all active:scale-95 shadow-sm"
+                >
+                  {isClearing ? 'جارِ التفريغ...' : 'نعم، تفريغ السجل'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isClearing}
+                  onClick={() => setIsConfirmClearOpen(false)}
+                  className="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold font-cairo hover:bg-slate-200 transition-colors"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {/* ── Attendance History Modal ─────────────── */}
       {historyModalYouth && (

@@ -494,4 +494,5 @@ function generate12WeekAttendance(): Attendance[] {
   return records;
 }
 
-export const INITIAL_ATTENDANCE: Attendance[] = generate12WeekAttendance();
+// Initial attendance starts empty so servants can record fresh from the app
+export const INITIAL_ATTENDANCE: Attendance[] = [];

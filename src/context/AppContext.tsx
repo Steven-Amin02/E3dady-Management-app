@@ -31,6 +31,7 @@ interface AppContextType {
     count: number;
     error?: string;
   }>;
+  clearAllAttendance: () => Promise<{ success: boolean; message: string }>;
   // Schedule CRUD
   addSchedule: (data: Omit<ServiceSchedule, 'id' | 'created_at'>) => Promise<ServiceSchedule>;
   updateSchedule: (id: string, updates: Partial<ServiceSchedule>) => Promise<void>;
@@ -94,7 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const CURRENT_VERSION = 'v6_supabase_sync';
+        const CURRENT_VERSION = 'v7_clean_empty_attendance';
         const version = localStorage.getItem('e3dady_data_version');
 
         if (version !== CURRENT_VERSION) {
@@ -154,7 +155,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (savedAttendance) {
             try {
               const list = JSON.parse(savedAttendance);
-              if (Array.isArray(list) && list.length > 0) {
+              if (Array.isArray(list)) {
                 let needsSave = false;
                 const converted = list.map((a: Attendance) => {
                   if (a.session_date === '2026-09-24') {
@@ -186,10 +187,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   localStorage.setItem('e3dady_attendance', JSON.stringify(migratedList));
                 }
               } else {
-                setAttendance(INITIAL_ATTENDANCE);
+                setAttendance([]);
               }
             } catch (_) {
-              setAttendance(INITIAL_ATTENDANCE);
+              setAttendance([]);
             }
           }
 
@@ -246,7 +247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
           if (sRes.data && sRes.data.length > 0) setServants(sRes.data);
           if (yRes.data && yRes.data.length > 0) setYouth(yRes.data);
-          if (aRes.data && aRes.data.length > 0) setAttendance(aRes.data);
+          if (aRes.data) setAttendance(aRes.data);
           if (scRes.data && scRes.data.length > 0) setSchedules(scRes.data);
 
           if (sRes.data && sRes.data.length > 0) {
@@ -580,6 +581,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [currentServant]
   );
 
+  // ATTENDANCE FULL WIPE / RESET
+  const clearAllAttendance = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    setAttendance([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('e3dady_attendance', JSON.stringify([]));
+        const bc = new BroadcastChannel('e3dady_sync_channel');
+        bc.postMessage({ type: 'ATTENDANCE_UPDATED', attendance: [] });
+        bc.close();
+      } catch (_) {}
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('attendance')
+          .delete()
+          .neq('session_date', '1970-01-01');
+
+        if (error) {
+          console.error('Supabase clear attendance error:', error);
+          return { success: true, message: 'تم تصفير الحضور محلياً (حدث تنبيه أثناء المزامنة السحابية)' };
+        }
+      } catch (err) {
+        console.error('Supabase clear attendance exception:', err);
+        return { success: true, message: 'تم تصفير الحضور محلياً' };
+      }
+    }
+
+    return { success: true, message: 'تم تفريغ كافة سجلات الحضور بنجاح' };
+  }, []);
+
   // SCHEDULE CRUD
   const addSchedule = useCallback(async (data: Omit<ServiceSchedule, 'id' | 'created_at'>): Promise<ServiceSchedule> => {
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'sch_' + Date.now();
@@ -769,6 +802,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateYouth,
         deleteYouth,
         saveAttendance,
+        clearAllAttendance,
         addSchedule,
         updateSchedule,
         deleteSchedule,
