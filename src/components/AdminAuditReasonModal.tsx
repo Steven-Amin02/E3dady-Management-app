@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AUDIT_REASON_OPTIONS, AuditReasonCategory } from '@/lib/fridayCalendar';
 import { formatDateArabic } from '@/lib/utils';
 import { ShieldAlert, Check, X, FileText } from 'lucide-react';
@@ -26,7 +26,7 @@ export function AdminAuditReasonModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onConfirm(selectedCategory, notes.trim());
   };

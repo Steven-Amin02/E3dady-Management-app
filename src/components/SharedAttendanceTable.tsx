@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic, triggerHaptic } from '@/lib/utils';
+import { formatDateArabic, triggerHaptic, schoolYearLabel } from '@/lib/utils';
 import { normalizeArabic } from '@/lib/arabicUtils';
 import { AttendanceStatus, SchoolYear, YouthWithDetails } from '@/types/database';
 import { FridayCalendarRibbon } from '@/components/FridayCalendarRibbon';
@@ -11,11 +11,9 @@ import { MemberSparkline } from '@/components/MemberSparkline';
 import { evaluateYouthPastoralRisk } from '@/lib/pastoralAnalytics';
 import {
   AuditReasonCategory,
-  getSessionLifecycleState,
-  getFridayTurnoutStats
+  getSessionLifecycleState
 } from '@/lib/fridayCalendar';
 import {
-  Calendar,
   CheckCircle,
   XCircle,
   HelpCircle,
@@ -26,7 +24,6 @@ import {
   Users,
   RotateCcw,
   Sparkles,
-  ChevronLeft,
   X,
   Lock,
   Unlock,
@@ -37,12 +34,10 @@ import {
   Copy,
   Share2,
   Check,
-  Wifi,
   WifiOff,
   Zap,
   Phone,
   Clock,
-  Tag,
   Trash2
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
@@ -357,7 +352,7 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
   };
 
   // ── SAVE HANDLER (CORE & AUDIT GATE) ─────────────────────────
-  const executeSave = async (auditCategory?: AuditReasonCategory, auditNotes?: string) => {
+  const executeSave = async (auditCategory?: AuditReasonCategory, _auditNotes?: string) => {
     setIsSaving(true);
     const records = Object.entries(localStatuses).map(([youthId, status]) => ({
       youth_id: youthId,
@@ -436,14 +431,7 @@ ${absenteesSection}صلوا من أجل الخدمة 🕊️✨`
     executeSave();
   };
 
-  const schoolYearLabel = (year: string) => {
-    switch (year) {
-      case '1st Prep': return 'أولى إعدادي';
-      case '2nd Prep': return 'ثانية إعدادي';
-      case '3rd Prep': return 'ثالثة إعدادي';
-      default: return year;
-    }
-  };
+  // schoolYearLabel imported from @/lib/utils
 
   return (
     <div className="space-y-4 pb-28 relative animate-fade-in">

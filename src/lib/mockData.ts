@@ -1,4 +1,4 @@
-import { Servant, Youth, Attendance, ServiceSchedule, AttendanceStatus } from '@/types/database';
+import { Servant, Youth, Attendance, ServiceSchedule } from '@/types/database';
 
 export const INITIAL_SERVANTS: Servant[] = [
   {
@@ -386,11 +386,11 @@ export const INITIAL_YOUTH: Youth[] = [
 
 export const INITIAL_SCHEDULES: ServiceSchedule[] = [
   {
-    "id": "30000000-0000-0000-0000-000000000101",
-    "date": "2026-09-25",
-    "speaker_servant_id": "10000000-0000-0000-0000-000000000001",
-    "lesson_title": "المحبة الحقيقية وبناء الصداقات",
-    "activity_notes": "مسابقة كتابية وفقرة ترانيم جماعية"
+    "id": "30000000-0000-0000-0000-000000000103",
+    "date": "2026-10-09",
+    "speaker_servant_id": "10000000-0000-0000-0000-000000000002",
+    "lesson_title": "حياة الصلاة الشخصية وسر التوبة",
+    "activity_notes": "صلاة جماعية وتأمل روحي"
   },
   {
     "id": "30000000-0000-0000-0000-000000000102",
@@ -400,99 +400,12 @@ export const INITIAL_SCHEDULES: ServiceSchedule[] = [
     "activity_notes": "ورشة عمل وتوزيع هدايا التفوق"
   },
   {
-    "id": "30000000-0000-0000-0000-000000000103",
-    "date": "2026-10-09",
-    "speaker_servant_id": "10000000-0000-0000-0000-000000000002",
-    "lesson_title": "حياة الصلاة الشخصية وسر التوبة",
-    "activity_notes": "صلاة جماعية وتأمل روحي"
+    "id": "30000000-0000-0000-0000-000000000101",
+    "date": "2026-09-25",
+    "speaker_servant_id": "10000000-0000-0000-0000-000000000001",
+    "lesson_title": "المحبة الحقيقية وبناء الصداقات",
+    "activity_notes": "مسابقة كتابية وفقرة ترانيم جماعية"
   }
 ];
-
-const FRIDAYS_12_WEEKS = [
-  '2026-07-10',
-  '2026-07-17',
-  '2026-07-24',
-  '2026-07-31',
-  '2026-08-07',
-  '2026-08-14',
-  '2026-08-21',
-  '2026-08-28',
-  '2026-09-04',
-  '2026-09-11',
-  '2026-09-18',
-  '2026-09-25',
-];
-
-function generate12WeekAttendance(): Attendance[] {
-  const records: Attendance[] = [];
-  const servantIds = INITIAL_SERVANTS.map((s) => s.id);
-
-  INITIAL_YOUTH.forEach((y, yIdx) => {
-    const youthNum = yIdx + 1;
-
-    FRIDAYS_12_WEEKS.forEach((sessionDate, fIdx) => {
-      const isLatestTwo = fIdx >= 10; // Sep 18, Sep 25
-      const isEarlierSix = fIdx < 6;
-
-      let status: AttendanceStatus = 'present';
-
-      // Group A: Critical Dropout (Youth #5, #10, #22, #35) -> 3-4 consecutive absences
-      if ([5, 10, 22, 35].includes(youthNum)) {
-        if (fIdx >= 8) {
-          // Missed last 4 sessions
-          status = 'absent';
-        } else if (fIdx === 7) {
-          status = 'excused';
-        } else {
-          status = fIdx % 2 === 0 ? 'present' : 'absent';
-        }
-      }
-      // Group B: Newcomer Risk (Youth #7, #28, #40) -> joined late August, attended 1-2, missed last 2
-      else if ([7, 28, 40].includes(youthNum)) {
-        if (fIdx < 7) {
-          return; // not yet joined
-        } else if (fIdx === 7 || fIdx === 8) {
-          status = 'present';
-        } else if (isLatestTwo) {
-          status = 'absent';
-        }
-      }
-      // Group C: Fading Regular (Youth #4, #15, #31) -> 100% in first 6 weeks, then <40% in last 6
-      else if ([4, 15, 31].includes(youthNum)) {
-        if (isEarlierSix) {
-          status = 'present';
-        } else {
-          // In last 6 weeks, present only once
-          status = fIdx === 8 ? 'present' : (fIdx === 10 ? 'excused' : 'absent');
-        }
-      }
-      // Group D: Regular Active Attendees (High commitment: 85%-100%)
-      else {
-        const hash = (youthNum * 17 + fIdx * 31) % 100;
-        if (hash < 82) {
-          status = 'present';
-        } else if (hash < 92) {
-          status = 'excused';
-        } else {
-          status = 'absent';
-        }
-      }
-
-      const recorderId = servantIds[(fIdx + youthNum) % servantIds.length];
-
-      records.push({
-        id: `att-${sessionDate}-${y.id.slice(-4)}`,
-        youth_id: y.id,
-        session_date: sessionDate,
-        status,
-        recorded_by: recorderId,
-        created_at: `${sessionDate}T18:00:00.000Z`,
-      });
-    });
-  });
-
-  return records;
-}
-
-// Initial attendance starts empty so servants can record fresh from the app
+// Initial attendance starts empty so servants can record fresh from the app
 export const INITIAL_ATTENDANCE: Attendance[] = [];

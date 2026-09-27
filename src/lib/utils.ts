@@ -57,27 +57,32 @@ export function formatShortDateArabic(dateStr: string): string {
   }
 }
 
+export { normalizeArabic } from './arabicUtils';
+
 /**
- * Normalizes Arabic string for resilient fuzzy matching:
- * - Normalizes Alef variations (أ, إ, آ, ٱ -> ا)
- * - Normalizes Taa Marbuta (ة -> ه)
- * - Normalizes Yaa (ى -> ي)
- * - Removes diacritics (tashkeel)
- * - Removes Tatweel / Kashida
- * - Trims and lowercases
+ * Maps school year identifier to standard Arabic display title
  */
-export function normalizeArabic(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/[\u064B-\u065F\u0670]/g, '') // Remove tashkeel (fatha, damma, kasra, etc.)
-    .replace(/\u0640/g, '') // Remove tatweel
-    .replace(/[أإآٱ]/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .replace(/ؤ/g, 'و')
-    .replace(/ئ/g, 'ي')
-    .toLowerCase()
-    .trim();
+export function schoolYearLabel(year: string): string {
+  switch (year) {
+    case '1st Prep':
+      return 'أولى إعدادي';
+    case '2nd Prep':
+      return 'ثانية إعدادي';
+    case '3rd Prep':
+      return 'ثالثة إعدادي';
+    default:
+      return year;
+  }
+}
+
+/**
+ * Normalizes phone numbers to WhatsApp international format (+20 Egypt)
+ */
+export function formatEgyptianPhoneForWhatsApp(phone: string): string {
+  let clean = phone.replace(/[^0-9]/g, '');
+  if (clean.startsWith('0')) clean = '2' + clean;
+  else if (clean.length > 0 && !clean.startsWith('20')) clean = '20' + clean;
+  return clean;
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Servant, ServantRole } from '@/types/database';
 import { CrossIcon } from '@/components/CrossIcon';
@@ -16,6 +16,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
+import { formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
 
 export function ServantsManager() {
   const {
@@ -72,10 +73,8 @@ export function ServantsManager() {
   };
 
   const getWhatsAppLink = (phone: string, name: string) => {
-    let clean = phone.replace(/[^0-9]/g, '');
-    if (clean.startsWith('0')) clean = '2' + clean;
-    else if (!clean.startsWith('20')) clean = '20' + clean;
-    const msg = `سلام ونعمة يا ${name} الغالي 🕊️✨ تواصل خاص بخدمة إعدادي`;
+    const clean = formatEgyptianPhoneForWhatsApp(phone);
+    const msg = `مساء الخير يا ${name} الغالي 🕊️✨ تواصل خاص بخدمة إعدادي`;
     return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
   };
 
@@ -132,27 +131,24 @@ export function ServantsManager() {
           return (
             <div
               key={servant.id}
-              className={`relative rounded-3xl border transition-all duration-200 overflow-hidden ${
-                isCurrentUser
+              className={`relative rounded-3xl border transition-all duration-200 overflow-hidden ${isCurrentUser
                   ? 'bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/60 shadow-card'
                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-card hover:-translate-y-0.5'
-              }`}
+                }`}
             >
               {/* Role stripe */}
-              <div className={`absolute top-0 left-0 right-0 h-0.5 ${
-                isAdminRole ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-sky-400 to-indigo-400'
-              }`} />
+              <div className={`absolute top-0 left-0 right-0 h-0.5 ${isAdminRole ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-sky-400 to-indigo-400'
+                }`} />
 
               <div className="p-4">
                 {/* Top row: avatar + name + actions */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
                     {/* Avatar */}
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-base shrink-0 ${
-                      isAdminRole
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-base shrink-0 ${isAdminRole
                         ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200/60 dark:border-amber-800/40 text-amber-600'
                         : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-400'
-                    }`}>
+                      }`}>
                       {isAdminRole ? '👑' : <CrossIcon className="w-5 h-5" />}
                     </div>
 
@@ -168,11 +164,10 @@ export function ServantsManager() {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                          isAdminRole
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${isAdminRole
                             ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/40'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
+                          }`}>
                           {isAdminRole ? 'أمين الخدمة' : 'خادم'}
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono" dir="ltr">

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic, toLocalDateString } from '@/lib/utils';
+import { formatDateArabic, toLocalDateString, schoolYearLabel, formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
 import { DailyFollowUpCandidate } from '@/lib/followUpRotation';
 import { MemberSparkline } from '@/components/MemberSparkline';
 import { PastoralOutcomeModal } from '@/components/PastoralOutcomeModal';
@@ -12,13 +12,9 @@ import {
   Phone,
   MessageCircle,
   CheckCircle2,
-  Calendar,
   Sparkles,
-  Clock,
   UserCheck,
-  Check,
-  HelpCircle,
-  AlertCircle,
+  
   FileCheck2,
   Activity,
   HeartHandshake
@@ -29,8 +25,8 @@ interface DailySingleFollowUpCardProps {
   onOpenSharedAttendance?: () => void;
 }
 
-export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: DailySingleFollowUpCardProps) {
-  const { currentServant, attendance, markYouthContacted } = useApp();
+export function DailySingleFollowUpCard({ candidate }: DailySingleFollowUpCardProps) {
+  const { attendance, markYouthContacted } = useApp();
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'call' | 'whatsapp'>('call');
@@ -55,21 +51,16 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
   const {
     youth,
     lastFridayDate,
-    lastFridayStatus,
-    isAbsentLastFriday,
+        isAbsentLastFriday,
     alreadyContactedToday,
     selectionReason,
     triageCategory,
-    consecutiveAbsences,
-    recentRate,
-  } = candidate;
+      } = candidate;
 
   const triageMeta = PASTORAL_TRIAGE_CONFIG[triageCategory] || PASTORAL_TRIAGE_CONFIG.regular_active;
 
   // Clean Egyptian phone format
-  let cleanPhone = youth.phone.replace(/[^0-9]/g, '');
-  if (cleanPhone.startsWith('0')) cleanPhone = '2' + cleanPhone;
-  else if (cleanPhone.length > 0 && !cleanPhone.startsWith('20')) cleanPhone = '20' + cleanPhone;
+  const cleanPhone = formatEgyptianPhoneForWhatsApp(youth.phone);
 
   // Personalized Arabic WhatsApp message tailored to triage context
   const formattedDate = formatDateArabic(lastFridayDate);
@@ -77,24 +68,17 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
   if (triageCategory === 'critical_dropout') {
     messageText = `سلام ومحبة يا ${youth.name} الغالي ❤️🕊️\nوحشتنا جداً وكل الخدام بيسألوا عليك! مكانك فارق معانا جداً في اجتماع إعدادي بكنيستنا.\nحابب أطمن عليك وعلى صحتك ودراستك، ومستنيك الجمعة القادمة بكل محبة وفرح ✨✝️`;
   } else if (triageCategory === 'newcomer_risk') {
-    messageText = `سلام ونعمة يا ${youth.name} الحبيب 🌿✨\nفرحنا بوجودك جداً في اللقاءات السابقة، ووحشتنا الجمعة الماضية!\nمستنيينك الجمعة الجاية مجهزين فقرات ومسابقات مميزة علشانك ❤️🕊️`;
+    messageText = `صباح الخير يا ${youth.name} الحبيب 🌿✨\nفرحنا بوجودك جداً في اللقاءات السابقة، ووحشتنا الجمعة الماضية!\nمستنيينك الجمعة الجاية مجهزين فقرات ومسابقات مميزة علشانك ❤️🕊️`;
   } else if (isAbsentLastFriday) {
     messageText = `سلام ومحبة يا ${youth.name} الغالي ❤️🕊️\nوحشتنا الجمعة الماضية (${formattedDate}) في اجتماع إعدادي بكنيستنا!\nحابب أطمن عليك وعلى دراستك وأفكرك بميعادنا الجمعة القادمة، مستنيينك بكل فرح ✨✝️`;
   } else {
-    messageText = `سلام ونعمة يا ${youth.name} الحبيب ❤️🕊️\nأخبارك إيه في دراستك وأيامك؟ حبيت أفتقدك وأطمن عليك وعلى أسرتك الكريمة.\nربنا معاك ويفرح قلبك دايماً، ومستنيك في ميعادنا الجمعة القادمة باجتماع إعدادي ✨✝️`;
+    messageText = `صباح الخير يا ${youth.name} الحبيب ❤️🕊️\nأخبارك إيه في دراستك وأيامك؟ حبيت أفتقدك وأطمن عليك وعلى أسرتك الكريمة.\nربنا معاك ويفرح قلبك دايماً، ومستنيك في ميعادنا الجمعة القادمة باجتماع إعدادي ✨✝️`;
   }
 
   const whatsAppUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}` : '#';
   const callUrl = youth.phone ? `tel:${youth.phone.replace(/[^0-9+]/g, '')}` : '#';
 
-  const schoolYearLabel = (year: string) => {
-    switch (year) {
-      case '1st Prep': return 'أولى إعدادي';
-      case '2nd Prep': return 'ثانية إعدادي';
-      case '3rd Prep': return 'ثالثة إعدادي';
-      default: return year;
-    }
-  };
+  // schoolYearLabel imported from @/lib/utils
 
   const handleOutcomeConfirm = async (
     outcome: PastoralOutcomeCategory,
@@ -131,15 +115,14 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
     <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card transition-all duration-300">
       {/* Top Gradient Banner / Accent Line */}
       <div
-        className={`h-2.5 w-full ${
-          triageCategory === 'critical_dropout'
+        className={`h-2.5 w-full ${triageCategory === 'critical_dropout'
             ? 'bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500'
             : triageCategory === 'newcomer_risk'
-            ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
-            : triageCategory === 'fading_regular'
-            ? 'bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600'
-            : 'bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-600'
-        }`}
+              ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
+              : triageCategory === 'fading_regular'
+                ? 'bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600'
+                : 'bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-600'
+          }`}
       />
 
       <div className="p-5 sm:p-6 space-y-4">
@@ -151,26 +134,6 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
                 <Sparkles className="w-3.5 h-3.5 text-sky-500" />
                 شاب اليوم للافتقاد
               </span>
-
-              {/* Automated Pastoral Risk Triage Badge */}
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold font-cairo border ${triageMeta.colorBg} ${triageMeta.colorText} ${triageMeta.colorBorder}`}
-              >
-                <span>{triageMeta.icon}</span>
-                <span>{triageMeta.badgeText}</span>
-              </span>
-
-              {alreadyContactedToday ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  تم افتقاده اليوم
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  <Clock className="w-3.5 h-3.5 text-amber-500" />
-                  بانتظار التواصل
-                </span>
-              )}
             </div>
 
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50 font-cairo tracking-tight pt-1">
@@ -269,11 +232,10 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => handleQuickContactClick('whatsapp')}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold font-cairo text-sm text-white shadow-sm transition-all duration-200 active:scale-95 ${
-              cleanPhone
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold font-cairo text-sm text-white shadow-sm transition-all duration-200 active:scale-95 ${cleanPhone
                 ? 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-emerald-500/20'
                 : 'bg-slate-300 dark:bg-slate-700 pointer-events-none'
-            }`}
+              }`}
           >
             <MessageCircle className="w-4 h-4 fill-white shrink-0" />
             <span>واتساب</span>
@@ -283,11 +245,10 @@ export function DailySingleFollowUpCard({ candidate, onOpenSharedAttendance }: D
           <a
             href={callUrl}
             onClick={() => handleQuickContactClick('call')}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold font-cairo text-sm text-white shadow-sm transition-all duration-200 active:scale-95 ${
-              youth.phone
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold font-cairo text-sm text-white shadow-sm transition-all duration-200 active:scale-95 ${youth.phone
                 ? 'bg-sky-600 hover:bg-sky-700 hover:shadow-sky-500/20'
                 : 'bg-slate-300 dark:bg-slate-700 pointer-events-none'
-            }`}
+              }`}
           >
             <Phone className="w-4 h-4 shrink-0" />
             <span>اتصال</span>

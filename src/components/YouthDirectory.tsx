@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import { useApp } from '@/context/AppContext';
-import { SchoolYear, Youth, YouthWithDetails } from '@/types/database';
+import { formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
+import { SchoolYear, Youth } from '@/types/database';
 import {
-  Users,
   Search,
-  Plus,
   Phone,
   MessageCircle,
   Edit2,
   Trash2,
   UserPlus,
   ShieldCheck,
-  Calendar,
-  AlertCircle,
-  FileText,
-  User,
-  Check,
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
 
@@ -29,8 +23,7 @@ export function YouthDirectory() {
     updateYouth,
     deleteYouth,
     getYouthWithDetails,
-    isAdmin,
-  } = useApp();
+      } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SchoolYear | 'all'>('all');
@@ -74,7 +67,7 @@ export function YouthDirectory() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.phone.trim()) {
       alert('يرجى كتابة الاسم ورقم الهاتف بالكامل');
@@ -125,10 +118,8 @@ export function YouthDirectory() {
 
   // WhatsApp Link Helper
   const getWhatsAppLink = (phone: string, name: string) => {
-    let cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.startsWith('0')) cleanPhone = '2' + cleanPhone;
-    else if (!cleanPhone.startsWith('20')) cleanPhone = '20' + cleanPhone;
-    const msg = `سلام ومحبة يا ${name} الغالي ❤️🕊️ حابب أطمن عليك وعلى دراستك ونشوفك دايماً بكل خير في الكنيسة!`;
+    const cleanPhone = formatEgyptianPhoneForWhatsApp(phone);
+    const msg = `سلام ومحبة يا ${name} الغالي ❤️🕊️ حابب أطمن عليك وأفكرك بميعادنا الجمعة القادمة في اجتماع إعدادي ✨✝️`;
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 

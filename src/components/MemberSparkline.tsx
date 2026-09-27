@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Attendance } from '@/types/database';
 import { calculateMemberSparkline, MemberSparklineMetrics, SparklineSession } from '@/lib/pastoralAnalytics';
-import { formatDateArabic } from '@/lib/utils';
 import { Check, X, HelpCircle, Minus } from 'lucide-react';
 
 interface MemberSparklineProps {

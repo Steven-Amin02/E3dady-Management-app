@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { PastoralOutcomeCategory, Youth } from '@/types/database';
 import { PASTORAL_OUTCOME_OPTIONS } from '@/lib/pastoralAnalytics';
 import { triggerHaptic } from '@/lib/utils';

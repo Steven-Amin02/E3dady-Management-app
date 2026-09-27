@@ -1,6 +1,5 @@
 import { Attendance, AttendanceStatus, PastoralOutcomeCategory, PastoralTriageCategory, Youth } from '@/types/database';
-import { formatDateArabic, toLocalDateString, parseLocalDate } from '@/lib/utils';
-import { calculateLastFriday } from '@/context/AppContext';
+import { toLocalDateString, parseLocalDate } from '@/lib/utils';
 
 /**
  * Metadata & UI configuration for Pastoral Contact Outcomes
@@ -157,7 +156,7 @@ export function getPastFridayDates(count = 12, referenceDateStr?: string): strin
   const ref = referenceDateStr ? parseLocalDate(referenceDateStr) : new Date();
 
   // Find the closest Friday on or before reference date
-  let current = new Date(ref);
+  const current = new Date(ref);
   const day = current.getDay();
   const diffToFriday = (day + 7 - 5) % 7;
   current.setDate(current.getDate() - diffToFriday);

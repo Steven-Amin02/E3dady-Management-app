@@ -1,4 +1,4 @@
-import { formatDateArabic, toLocalDateString, parseLocalDate } from '@/lib/utils';
+import { toLocalDateString, parseLocalDate } from '@/lib/utils';
 import { Attendance } from '@/types/database';
 
 export type LifecycleState = 'upcoming' | 'live' | 'grace' | 'locked';
@@ -9,7 +9,7 @@ export interface FridaySessionMeta {
   displayMonth: string; // e.g. "سبتمبر"
   fullLabel: string;
   liturgicalTag?: string;
-  tagType: 'feast' | 'exams' | 'retreat' | 'regular';
+  tagType?: 'feast' | 'exams' | 'retreat' | 'regular';
   term: 'fall' | 'lent' | 'summer';
   termLabel: string;
   lifecycleState: LifecycleState;
@@ -61,30 +61,6 @@ export function getSessionLifecycleState(sessionDateStr: string, now = new Date(
   }
 }
 
-/**
- * Known liturgical, feast, and academic calendar markers for Church Middle School Youth
- */
-const KNOWN_SEASONAL_EVENTS: Record<string, { tag: string; type: 'feast' | 'exams' | 'retreat' | 'regular' }> = {
-  // September
-  '2026-09-18': { tag: 'بدء العام الكنسي والدراسي', type: 'regular' },
-  '2026-09-25': { tag: 'عيد الصليب المجيد ✝️', type: 'feast' },
-  // October
-  '2026-10-02': { tag: 'لقاء بناء الصداقات والمحبة', type: 'regular' },
-  '2026-10-09': { tag: 'احتفالية المتفوقين دراسياً', type: 'retreat' },
-  '2026-10-16': { tag: 'ورشة القيادة والمسابقات', type: 'regular' },
-  '2026-10-23': { tag: 'لقاء الصلاة الشخصية', type: 'regular' },
-  '2026-10-30': { tag: 'استعداد امتحانات الشهر', type: 'exams' },
-  // November
-  '2026-11-06': { tag: 'أسبوع الميدتيرم الأول 📚', type: 'exams' },
-  '2026-11-13': { tag: 'لقاء التحديات وسن المراهقة', type: 'regular' },
-  '2026-11-20': { tag: 'مسابقة سفر الملوك الثاني', type: 'regular' },
-  '2026-11-27': { tag: 'بدء صوم الميلاد المجيد 🕊️', type: 'feast' },
-  // December
-  '2026-12-04': { tag: 'تسابيح شهر كيهك المبارك', type: 'feast' },
-  '2026-12-11': { tag: 'سهرة كيهكية للشباب ✨', type: 'feast' },
-  '2026-12-18': { tag: 'استعداد امتحانات نصف العام', type: 'exams' },
-  '2026-12-25': { tag: 'لقاء ترانيم وموسيقى الميلاد', type: 'feast' },
-};
 
 /**
  * Generates the full academic year Friday sessions list (from September to August)
@@ -98,8 +74,8 @@ export function generateAcademicFridays(referenceDate = new Date()): FridaySessi
   // Let's generate 40 consecutive Fridays spanning September through June/July
   const startDate = new Date(startYear, 8, 1, 12, 0, 0); // Sept 1st noon to avoid offset shift
   // Find first Friday in September
-  let dayOfWeek = startDate.getDay();
-  let daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+  const dayOfWeek = startDate.getDay();
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
   startDate.setDate(startDate.getDate() + daysUntilFriday);
 
   const fridays: FridaySessionInfo[] = [];
@@ -120,7 +96,7 @@ export function generateAcademicFridays(referenceDate = new Date()): FridaySessi
       termLabel = 'فصل الخريف والدراسة';
     } else if (month >= 0 && month <= 3) {
       term = 'lent';
-      termLabel = 'فصل نصف العام والصوم الكبير';
+      termLabel = 'نصف العام';
     } else {
       term = 'summer';
       termLabel = 'فصل الخماسين والنشاط الصيفي';
@@ -128,11 +104,6 @@ export function generateAcademicFridays(referenceDate = new Date()): FridaySessi
 
     const dayNumber = String(fDate.getDate());
     const monthArabic = new Intl.DateTimeFormat('ar-EG', { month: 'short' }).format(fDate);
-    const event = KNOWN_SEASONAL_EVENTS[isoStr] || {
-      tag: 'اجتماع أسبوعي عادي',
-      type: 'regular' as const,
-    };
-
     const lifecycle = getSessionLifecycleState(isoStr, referenceDate);
 
     fridays.push({
@@ -140,8 +111,6 @@ export function generateAcademicFridays(referenceDate = new Date()): FridaySessi
       displayDay: dayNumber,
       displayMonth: monthArabic,
       fullLabel: `جمعة ${dayNumber} ${monthArabic}`,
-      liturgicalTag: event.tag,
-      tagType: event.type,
       term,
       termLabel,
       lifecycleState: lifecycle.state,

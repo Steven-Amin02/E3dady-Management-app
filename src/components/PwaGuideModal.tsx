@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { Smartphone, Share, PlusSquare, CheckCircle, Download } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 import { Portal } from '@/components/Portal';
 
 interface PwaGuideModalProps {

@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Attendance } from '@/types/database';
 import {
   generateAcademicFridays,
-  getFridayTurnoutStats,
-  FridaySessionInfo,
-  LifecycleState
+  getFridayTurnoutStats
 } from '@/lib/fridayCalendar';
 import {
-  Calendar,
   ChevronRight,
   ChevronLeft,
   Lock,
   Zap,
-  Clock,
-  Sparkles,
-  BookOpen,
-  Cross
+  Clock
 } from 'lucide-react';
 
 interface FridayCalendarRibbonProps {
@@ -77,44 +71,40 @@ export function FridayCalendarRibbon({
           <button
             type="button"
             onClick={() => setSelectedTerm('all')}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
-              selectedTerm === 'all'
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${selectedTerm === 'all'
                 ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+              }`}
           >
             كل العام
           </button>
           <button
             type="button"
             onClick={() => setSelectedTerm('fall')}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
-              selectedTerm === 'fall'
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${selectedTerm === 'fall'
                 ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+              }`}
           >
             الخريف والدراسة
           </button>
           <button
             type="button"
             onClick={() => setSelectedTerm('lent')}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
-              selectedTerm === 'lent'
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${selectedTerm === 'lent'
                 ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+              }`}
           >
-            نصف العام والصوم
+            نصف العام
           </button>
           <button
             type="button"
             onClick={() => setSelectedTerm('summer')}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
-              selectedTerm === 'summer'
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${selectedTerm === 'summer'
                 ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+              }`}
           >
             الصيف والنشاط
           </button>
@@ -175,11 +165,10 @@ export function FridayCalendarRibbon({
               type="button"
               onClick={() => onSelectDate(fSession.date)}
               style={{ scrollSnapAlign: 'center' }}
-              className={`relative shrink-0 w-[130px] sm:w-[145px] p-3 rounded-2xl border text-right transition-all duration-200 active:scale-95 flex flex-col justify-between gap-2 ${borderHealth} ${
-                isSelected
+              className={`relative shrink-0 w-[110px] sm:w-[125px] p-2.5 rounded-2xl border text-right transition-all duration-200 active:scale-95 flex flex-col justify-between gap-2 ${borderHealth} ${isSelected
                   ? 'bg-gradient-to-b from-sky-50/90 to-white dark:from-sky-950/40 dark:to-slate-900 shadow-md ring-2 ring-sky-500'
                   : 'bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/80'
-              }`}
+                }`}
             >
               {/* Top date and lifecycle pill */}
               <div className="flex items-start justify-between gap-1 w-full">
@@ -209,13 +198,6 @@ export function FridayCalendarRibbon({
                     <Clock className="w-3 h-3" />
                   </span>
                 )}
-              </div>
-
-              {/* Liturgical or Event Marker */}
-              <div className="w-full">
-                <span className="text-[10px] text-slate-600 dark:text-slate-300 font-tajawal line-clamp-1 block leading-tight">
-                  {fSession.liturgicalTag}
-                </span>
               </div>
 
               {/* Attendance percentage indicator */}
@@ -252,22 +234,20 @@ export function FridayCalendarRibbon({
           <button
             type="button"
             onClick={() => onSelectDate(lastFridayDate)}
-            className={`px-2.5 py-1 rounded-lg transition-all ${
-              selectedDate === lastFridayDate
+            className={`px-2.5 py-1 rounded-lg transition-all ${selectedDate === lastFridayDate
                 ? 'bg-sky-600 text-white font-bold'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-            }`}
+              }`}
           >
             الجمعة الماضية
           </button>
           <button
             type="button"
             onClick={() => onSelectDate(nextFridayDate)}
-            className={`px-2.5 py-1 rounded-lg transition-all ${
-              selectedDate === nextFridayDate
+            className={`px-2.5 py-1 rounded-lg transition-all ${selectedDate === nextFridayDate
                 ? 'bg-sky-600 text-white font-bold'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-            }`}
+              }`}
           >
             الجمعة القادمة
           </button>

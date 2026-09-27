@@ -1,21 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic } from '@/lib/utils';
+import { formatDateArabic, toLocalDateString } from '@/lib/utils';
 import { ServiceSchedule } from '@/types/database';
 import {
-  CalendarDays,
   Plus,
   Edit2,
   Trash2,
   Sparkles,
-  User,
   BookOpen,
-  FileText,
   Clock,
-  CheckCircle,
-  ShieldAlert,
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
 
@@ -27,8 +22,7 @@ export function ServiceScheduleView() {
     addSchedule,
     updateSchedule,
     deleteSchedule,
-    nextFridayDate,
-    lastFridayDate,
+    nextFridayDate
   } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,8 +38,21 @@ export function ServiceScheduleView() {
 
   const openAddModal = () => {
     setEditingSchedule(null);
+
+    // Calculate default date: next Friday after the latest scheduled meeting
+    let defaultDate = nextFridayDate;
+    if (schedules.length > 0) {
+      const sortedDates = schedules.map((s) => s.date).sort();
+      const maxDate = sortedDates[sortedDates.length - 1];
+      if (maxDate >= nextFridayDate) {
+        const d = new Date(maxDate);
+        d.setDate(d.getDate() + 7);
+        defaultDate = toLocalDateString(d);
+      }
+    }
+
     setFormData({
-      date: nextFridayDate,
+      date: defaultDate,
       speaker_servant_id: servants[0]?.id || '',
       lesson_title: '',
       activity_notes: '',
@@ -95,6 +102,19 @@ export function ServiceScheduleView() {
     setDeleteId(null);
   };
 
+  // Sorted schedules: Newest and future dates at the top, older underneath
+  const sortedSchedules = useMemo(() => {
+    return [...schedules].sort((a, b) => b.date.localeCompare(a.date));
+  }, [schedules]);
+
+  // Accurately identify the immediate upcoming schedule (on or closest after nextFridayDate)
+  const nextScheduleId = useMemo(() => {
+    const upcoming = [...schedules]
+      .filter((s) => s.date >= nextFridayDate)
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
+    return upcoming?.id || null;
+  }, [schedules, nextFridayDate]);
+
   return (
     <div className="space-y-4 pb-24 animate-fade-in">
       {/* Top Banner */}
@@ -132,9 +152,9 @@ export function ServiceScheduleView() {
 
       {/* Rota List */}
       <div className="space-y-3">
-        {schedules.map((item, index) => {
+        {sortedSchedules.map((item) => {
           const speaker = servants.find((s) => s.id === item.speaker_servant_id);
-          const isNext = item.date === nextFridayDate || item.date >= nextFridayDate && (index === 0 || schedules[index - 1]?.date < nextFridayDate);
+          const isNext = item.id === nextScheduleId;
 
           return (
             <div

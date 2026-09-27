@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle2, AlertCircle, Sparkles, Send, ExternalLink, ShieldCheck } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Sparkles, Send } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Portal } from '@/components/Portal';
 
@@ -43,7 +43,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       const absentCount = getAbsentAssignedYouth(currentServant?.id).length;
       const title = '🕊️ تذكير خدمة إعدادي: افتقاد الجمعة';
-      const body = `سلام ونعمة يا ${currentServant?.name}، لديك ${absentCount} مخدومين بحاجة للافتقاد هذا الأسبوع. ادخل للاطمئنان عليهم!`;
+      const body = ` مساء الخير يا ${currentServant?.name}، لديك ${absentCount} مخدومين بحاجة للافتقاد هذا الأسبوع. ادخل للاطمئنان عليهم!`;
 
       try {
         new Notification(title, {
@@ -104,19 +104,18 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                   حالة إشعارات المتصفح (Web Notification):
                 </span>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    permission === 'granted'
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${permission === 'granted'
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                       : permission === 'denied'
-                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                  }`}
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                    }`}
                 >
                   {permission === 'granted'
                     ? 'مفعلة ✓'
                     : permission === 'denied'
-                    ? 'محظورة ✕'
-                    : 'غير محددة'}
+                      ? 'محظورة ✕'
+                      : 'غير محددة'}
                 </span>
               </div>
 

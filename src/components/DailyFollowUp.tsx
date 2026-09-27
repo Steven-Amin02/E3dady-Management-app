@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic } from '@/lib/utils';
+import { formatDateArabic, schoolYearLabel, formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
 import { YouthWithDetails } from '@/types/database';
 import { CrossIcon } from '@/components/CrossIcon';
 import { DailySingleFollowUpCard } from '@/components/DailySingleFollowUpCard';
@@ -10,15 +10,11 @@ import { MemberSparkline } from '@/components/MemberSparkline';
 import {
   Phone,
   MessageCircle,
-  CheckCircle2,
-  Calendar,
   Sparkles,
   ChevronLeft,
   ChevronDown,
   Users,
-  AlertCircle,
-  ArrowRight,
-  ExternalLink
+  AlertCircle
 } from 'lucide-react';
 
 interface DailyFollowUpProps {
@@ -26,7 +22,7 @@ interface DailyFollowUpProps {
   onNavigateAttendance: () => void;
 }
 
-export function DailyFollowUp({ onOpenNotifications, onNavigateAttendance }: DailyFollowUpProps) {
+export function DailyFollowUp({ onNavigateAttendance }: DailyFollowUpProps) {
   const {
     currentServant,
     lastFridayDate,
@@ -34,7 +30,6 @@ export function DailyFollowUp({ onOpenNotifications, onNavigateAttendance }: Dai
     getAbsentAssignedYouth,
     youth,
     attendance,
-    getYouthWithDetails,
   } = useApp();
 
   const [showAllAbsents, setShowAllAbsents] = useState(false);
@@ -48,23 +43,13 @@ export function DailyFollowUp({ onOpenNotifications, onNavigateAttendance }: Dai
   const absentAssignedYouth = getAbsentAssignedYouth(currentServant?.id);
 
   const getWhatsAppLink = (member: YouthWithDetails) => {
-    let cleanPhone = member.phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.startsWith('0')) cleanPhone = '2' + cleanPhone;
-    else if (cleanPhone.length > 0 && !cleanPhone.startsWith('20')) cleanPhone = '20' + cleanPhone;
-
+    const cleanPhone = formatEgyptianPhoneForWhatsApp(member.phone);
     const formattedDate = formatDateArabic(lastFridayDate);
     const message = `سلام ومحبة يا ${member.name} الغالي ❤️🕊️\nوحشتنا جداً الجمعة الماضية (${formattedDate}) في اجتماع إعدادي بكنيستنا!\nحابب أطمن عليك وأفكرك بميعادنا الجمعة القادمة، مستنيينك بكل فرح ✨✝️`;
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
 
-  const schoolYearLabel = (year: string) => {
-    switch (year) {
-      case '1st Prep': return 'أولى إعدادي';
-      case '2nd Prep': return 'ثانية إعدادي';
-      case '3rd Prep': return 'ثالثة إعدادي';
-      default: return year;
-    }
-  };
+  // schoolYearLabel imported from @/lib/utils
 
   return (
     <div className="space-y-5 pb-24 animate-fade-in">
@@ -93,11 +78,11 @@ export function DailyFollowUp({ onOpenNotifications, onNavigateAttendance }: Dai
         {/* Servant greeting */}
         <div className="relative z-10">
           <h2 className="text-xl sm:text-2xl font-black font-cairo leading-snug">
-            سلام ونعمة،<br />
+            صباح الخير<br />
             <span className="text-sky-200">{currentServant?.name || 'يا خادم المسيح'} 🌿</span>
           </h2>
           <p className="text-xs text-sky-100/80 mt-1.5 leading-relaxed font-tajawal max-w-sm">
-            «أَنَا هُوَ الرَّاعِي الصَّالِحُ، وَأَعْرِفُ خَاصَّتِي» — يوحنا ١٠: ١٤
+            ارْعَوْا رَعِيَّةَ اللهِ الَّتِي بَيْنَكُمْ نُظَّارًا، لاَ عَنِ اضْطِرَارٍ بَلْ بِالاخْتِيَارِ (١ بطرس ٥: ٢)
           </p>
         </div>
 

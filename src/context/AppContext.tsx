@@ -95,7 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const CURRENT_VERSION = 'v7_clean_empty_attendance';
+        const CURRENT_VERSION = 'v8_schedules_descending';
         const version = localStorage.getItem('e3dady_data_version');
 
         if (version !== CURRENT_VERSION) {
@@ -198,7 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             try {
               const list = JSON.parse(savedSchedules);
               if (Array.isArray(list) && list.length > 0) {
-                setSchedules(list);
+                setSchedules(list.sort((a: ServiceSchedule, b: ServiceSchedule) => b.date.localeCompare(a.date)));
               } else {
                 setSchedules(INITIAL_SCHEDULES);
               }
@@ -242,7 +242,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             supabase
               .from('service_schedules')
               .select('id, date, speaker_servant_id, lesson_title, activity_notes')
-              .order('date', { ascending: true }),
+              .order('date', { ascending: false }),
           ]);
 
           if (sRes.data && sRes.data.length > 0) setServants(sRes.data);
@@ -626,7 +626,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: inserted } = await supabase.from('service_schedules').insert([newSchedule]).select().single();
         if (inserted) {
-          setSchedules((prev) => [...prev, inserted].sort((a, b) => a.date.localeCompare(b.date)));
+          setSchedules((prev) => [...prev, inserted].sort((a, b) => b.date.localeCompare(a.date)));
           return inserted;
         }
       } catch (err) {
@@ -634,13 +634,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    setSchedules((prev) => [...prev, newSchedule].sort((a, b) => a.date.localeCompare(b.date)));
+    setSchedules((prev) => [...prev, newSchedule].sort((a, b) => b.date.localeCompare(a.date)));
     return newSchedule;
   }, []);
 
   const updateSchedule = useCallback(async (id: string, updates: Partial<ServiceSchedule>) => {
     setSchedules((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updates } : s)).sort((a, b) => a.date.localeCompare(b.date))
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s)).sort((a, b) => b.date.localeCompare(a.date))
     );
 
     if (isSupabaseConfigured && supabase) {
