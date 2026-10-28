@@ -85,6 +85,7 @@ export interface ServiceSchedule {
   id: string;
   date: string; // ISO date 'YYYY-MM-DD'
   speaker_servant_id: string | null;
+  speaker_name?: string | null;
   lesson_title: string;
   activity_notes: string;
   created_at?: string;
@@ -100,4 +101,3 @@ export interface YouthWithDetails extends Youth {
   triage_category?: PastoralTriageCategory;
   last_follow_up_outcome?: PastoralOutcomeCategory;
 }
-

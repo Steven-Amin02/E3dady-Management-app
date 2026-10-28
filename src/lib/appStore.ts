@@ -332,7 +332,7 @@ export function createAppStore() {
       const { data: row, error } = await requireClient().from('service_schedules').insert(value).select().single(); if (error) throw error; return row;
     }),
     updateSchedule: (id: string, value: Partial<ServiceSchedule>) => confirmed(async () => {
-      const { error } = await requireClient().from('service_schedules').update({ date: value.date, speaker_servant_id: value.speaker_servant_id, lesson_title: value.lesson_title, activity_notes: value.activity_notes }).eq('id', id).select().single(); if (error) throw error;
+      const { error } = await requireClient().from('service_schedules').update({ date: value.date, speaker_servant_id: value.speaker_servant_id, speaker_name: value.speaker_name, lesson_title: value.lesson_title, activity_notes: value.activity_notes }).eq('id', id).select().single(); if (error) throw error;
     }),
     deleteSchedule: (id: string) => confirmed(async () => {
       const { error } = await requireClient().from('service_schedules').delete().eq('id', id).select().single(); if (error) throw error;

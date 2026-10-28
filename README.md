@@ -31,8 +31,9 @@ The build also creates `public/precache-manifest.json`, checks client chunks for
 
 1. Back up an existing Supabase database and export any old browser-only work before rollout. Legacy browser caches are also archived locally by the upgraded app before being removed; an authenticated administrator can download that backup from the sync panel. They are never silently imported into cloud data.
 2. In the Supabase SQL Editor, run **`supabase/migrations/20261028_security_and_reliability.sql` as the database owner**. This file supports both a fresh project and an existing installation, preserves operational rows, adds missing columns, replaces permissive policies, and removes the unsafe legacy RPCs. Local PostgreSQL tests cover both installation paths and reapplication.
-3. Create the service's user accounts using the Supabase Authentication dashboard. Use confirmed email/password accounts; do not rely on signup metadata to assign roles. Disable public signup in your project if account creation is administrator-managed.
-4. Link each Auth user to its existing servant record. Run the following as the database owner after replacing both UUIDs:
+3. If the application has already been deployed, run **`supabase/migrations/20261029_external_schedule_speakers.sql` as the database owner**. It adds `service_schedules.speaker_name`, which is required when a meeting speaker is external or is not in the church servant directory. The migration also asks PostgREST to reload its schema cache. If the error `Could not find the 'speaker_name' column of 'service_schedules' in the schema cache` appears, this migration has not yet been run against the same Supabase project used by `.env.local`.
+4. Create the service's user accounts using the Supabase Authentication dashboard. Use confirmed email/password accounts; do not rely on signup metadata to assign roles. Disable public signup in your project if account creation is administrator-managed.
+5. Link each Auth user to its existing servant record. Run the following as the database owner after replacing both UUIDs:
 
 ```sql
 UPDATE public.servants
@@ -49,8 +50,8 @@ VALUES ('Administrator name', 'Administrator phone', 'admin', 'AUTH-USER-UUID');
 
 Verify the intended rows were linked. The servant UUID and Auth UUID do not need to match. Adding a servant in the UI creates a directory record; creating/linking its Auth login remains an administrator provisioning step. There is no self-service role escalation or browser impersonation. Keep at least one linked administrator; the database prevents deleting/demoting the last one.
 
-5. Check the Realtime publication for the application's tables if your project uses a custom publication configuration. The migration adds missing tables to `supabase_realtime` when that publication exists. A periodic refresh/reconnect path also works without realtime events.
-6. Deploy the upgraded app after the migration and account links are ready. An older anonymous-only client cannot write through the new policies. Have users reload to activate the new service worker.
+6. Check the Realtime publication for the application's tables if your project uses a custom publication configuration. The migration adds missing tables to `supabase_realtime` when that publication exists. A periodic refresh/reconnect path also works without realtime events.
+7. Deploy the upgraded app after the migrations and account links are ready. An older anonymous-only client cannot write through the new policies. Have users reload to activate the new service worker.
 
 Do **not** run `schema.sql` or `fix_permissions_and_seed.sql` as repair scripts: they are retired and now stop with an explanatory error. The older migrations are historical; a fresh SQL Editor installation can start directly with the standalone 20261028 migration. Do not reapply the historical open-permission migrations to an operational database.
 
