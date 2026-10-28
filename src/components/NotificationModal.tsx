@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Bell, Send } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
-import { Portal } from '@/components/Portal';
+import { useState } from "react";
+import { Bell, Send } from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { Portal } from "@/components/Portal";
 
 interface NotificationModalProps {
   isOpen: boolean;
@@ -11,60 +11,71 @@ interface NotificationModalProps {
 }
 
 export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
-  const { currentServant, getAbsentAssignedYouth } = useApp(state => ({ currentServant: state.currentServant, getAbsentAssignedYouth: state.getAbsentAssignedYouth }));
-  const [permission, setPermission] = useState<NotificationPermission>(() => typeof Notification === 'undefined' ? 'default' : Notification.permission);
+  const { currentServant, getAbsentAssignedYouth } = useApp((state) => ({
+    currentServant: state.currentServant,
+    getAbsentAssignedYouth: state.getAbsentAssignedYouth,
+  }));
+  const [permission, setPermission] = useState<NotificationPermission>(() =>
+    typeof Notification === "undefined" ? "default" : Notification.permission,
+  );
   const [testSent, setTestSent] = useState(false);
+  const [error, setError] = useState("");
+  const absentYouth = getAbsentAssignedYouth(currentServant?.id);
+  const nextYouth = absentYouth[0];
 
   if (!isOpen) return null;
 
   const requestBrowserPermission = async () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (typeof window !== "undefined" && "Notification" in window) {
       try {
         const result = await Notification.requestPermission();
         setPermission(result);
-        if (result === 'granted') {
-          sendTestNotification();
+        if (result === "granted") {
+          void sendTestNotification();
         }
-      } catch (err) {
-        console.error('Error requesting notification permission:', err);
+      } catch {
+        setError(
+          "تعذر تفعيل الإشعارات. تحقق من إعدادات المتصفح ثم حاول مرة أخرى.",
+        );
       }
     } else {
-      alert('متصفحك لا يدعم خاصية Notification API');
+      setError("هذا المتصفح لا يدعم إشعارات الجهاز.");
     }
   };
 
-  const sendTestNotification = () => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      const absentCount = getAbsentAssignedYouth(currentServant?.id).length;
-      const title = '🕊️ تذكير خدمة إعدادي: افتقاد الجمعة';
-      const body = ` مساء الخير يا ${currentServant?.name}، لديك ${absentCount} مخدومين بحاجة للافتقاد هذا الأسبوع. ادخل للاطمئنان عليهم!`;
+  const sendTestNotification = async () => {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      Notification.permission !== "granted"
+    )
+      return;
+    const title = nextYouth ? `اتواصل مع ${nextYouth.name}` : "بفكرك بالمتابعة";
+    const body = nextYouth
+      ? `اتصل بـ ${nextYouth.name} اليوم للاطمئنان عليه. لديك ${absentYouth.length} شابًا يحتاج إلى افتقاد.`
+      : "لا يوجد شاب غائب حاليًا. افتح التطبيق لمراجعة قائمة مخدوميك.";
+    const options = {
+      body,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      dir: "rtl" as const,
+      lang: "ar",
+      data: { url: "/?tab=followup", youthId: nextYouth?.id ?? null },
+    };
 
-      try {
-        new Notification(title, {
-          body,
-          icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-192x192.png',
-          dir: 'rtl',
-          lang: 'ar',
-        });
-        setTestSent(true);
-        setTimeout(() => setTestSent(false), 4000);
-      } catch (err) {
-        console.warn('Native notification failed, testing via Service Worker:', err);
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then((reg) => {
-            reg.showNotification(title, {
-              body,
-              icon: '/icons/icon-192x192.png',
-              badge: '/icons/icon-192x192.png',
-              dir: 'rtl',
-              lang: 'ar',
-            });
-            setTestSent(true);
-            setTimeout(() => setTestSent(false), 4000);
-          });
-        }
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, options);
+      } else {
+        new Notification(title, options);
       }
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 4000);
+    } catch {
+      setError(
+        "تعذر إرسال الإشعار. تأكد من تثبيت التطبيق والسماح بإشعارات الجهاز.",
+      );
     }
   };
 
@@ -83,6 +94,8 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
             </div>
             <button
               type="button"
+              data-dialog-close
+              aria-label="إغلاق تذكيرات الافتقاد"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
             >
@@ -95,30 +108,32 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-cairo">
-                  حالة إشعارات المتصفح (Web Notification):
+                  حالة إشعارات الجهاز:
                 </span>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${permission === 'granted'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                      : permission === 'denied'
-                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    permission === "granted"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : permission === "denied"
+                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                  }`}
                 >
-                  {permission === 'granted'
-                    ? 'مفعلة ✓'
-                    : permission === 'denied'
-                      ? 'محظورة ✕'
-                      : 'غير محددة'}
+                  {permission === "granted"
+                    ? "مفعلة ✓"
+                    : permission === "denied"
+                      ? "محظورة ✕"
+                      : "غير محددة"}
                 </span>
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400 font-tajawal leading-relaxed">
-                يُرسل النظام تذكيراً دورياً بالهاتف للخادم كل أسبوع لتفقد المخدومين الغائبين والتواصل معهم.
+                يمكنك تفعيل إشعارات الجهاز لتذكيرك باسم شاب محدد يحتاج إلى
+                الاتصال به. الإرسال الحالي تجريبي أثناء فتح التطبيق.
               </p>
 
               <div className="flex items-center gap-2 pt-1">
-                {permission !== 'granted' ? (
+                {permission !== "granted" ? (
                   <button
                     type="button"
                     onClick={requestBrowserPermission}
@@ -129,23 +144,36 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                 ) : (
                   <button
                     type="button"
-                    onClick={sendTestNotification}
+                    onClick={() => void sendTestNotification()}
                     className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>إرسال إشعار تجريبي فوري</span>
+                    <span>إرسال تذكير باسم شاب الآن</span>
                   </button>
                 )}
               </div>
 
               {testSent && (
                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400 text-center font-bold animate-pulse">
-                  تم إرسال الإشعار بنجاح! راجع شريط إشعارات جهازك الآن.
+                  تم إرسال التذكير. إذا لم يظهر، راجع إعدادات إشعارات الجهاز.
+                </p>
+              )}
+              {error && (
+                <p role="alert" className="text-xs font-bold text-rose-600">
+                  {error}
                 </p>
               )}
             </div>
 
-            <p className="p-4 text-xs text-slate-600 dark:text-slate-300">هذه أداة لاختبار إشعار محلي أثناء فتح التطبيق. لا توجد إشعارات مجدولة أو إرسال عندما يكون التطبيق مغلقاً.</p>
+            <div className="rounded-2xl bg-sky-50 p-4 text-xs text-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+              {nextYouth ? (
+                <>
+                  التذكير المقترح الآن: <strong>{nextYouth.name}</strong>
+                </>
+              ) : (
+                "لا يوجد حاليًا شاب غائب يحتاج إلى افتقاد."
+              )}
+            </div>
           </div>
 
           <div className="p-4 pt-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
@@ -154,7 +182,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
               onClick={onClose}
               className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 transition-colors"
             >
-              تم
+              إغلاق
             </button>
           </div>
         </div>

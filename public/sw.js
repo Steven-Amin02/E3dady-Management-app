@@ -37,6 +37,17 @@ self.addEventListener('install', event => {
   event.waitUntil(warmShell().then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const existing = list.find(client => 'focus' in client);
+    if (existing) {
+      return existing.focus().then(() => existing.navigate(target));
+    }
+    return clients.openWindow(target);
+  }));
+});
 self.addEventListener('fetch', event => {
   const request = event.request, url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;

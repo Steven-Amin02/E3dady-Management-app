@@ -18,7 +18,7 @@ export function Header({ onOpenNotifications, onOpenPwaGuide, onNavigate }: Head
       <div className="relative flex gap-1">
         <button className="rounded-xl p-2" aria-label="المزيد" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}><MoreHorizontal className="w-5 h-5" /></button>
         {menuOpen && <div className="absolute left-0 top-12 z-50 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-          <button className="flex w-full items-center gap-2 rounded-xl p-3 text-right text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setMenuOpen(false); onOpenNotifications(); }}><Bell className="w-4 h-4" />اختبار الإشعارات</button>
+          <button className="flex w-full items-center gap-2 rounded-xl p-3 text-right text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setMenuOpen(false); onOpenNotifications(); }}><Bell className="w-4 h-4" />تذكيرات الافتقاد</button>
           <button className="flex w-full items-center gap-2 rounded-xl p-3 text-right text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setMenuOpen(false); onOpenPwaGuide(); }}><Smartphone className="w-4 h-4" />تثبيت التطبيق</button>
           <button className="flex w-full items-center gap-2 rounded-xl p-3 text-right text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setMenuOpen(false); onNavigate('schedule'); }}><CalendarDays className="w-4 h-4" />جدول الخدمة</button>
           {isAdmin && <button className="flex w-full items-center gap-2 rounded-xl p-3 text-right text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setMenuOpen(false); onNavigate('servants'); }}><ShieldCheck className="w-4 h-4" />إدارة الخدام</button>}
