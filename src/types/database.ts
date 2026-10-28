@@ -23,6 +23,7 @@ export interface Servant {
   phone: string;
   role: ServantRole;
   created_at?: string;
+  auth_user_id?: string | null;
 }
 
 export interface Youth {
@@ -34,6 +35,9 @@ export interface Youth {
   notes: string;
   last_contacted_at?: string | null;
   created_at?: string;
+  joined_on?: string | null;
+  left_on?: string | null;
+  school_year_history?: Record<string, SchoolYear>;
 }
 
 export interface FollowUpLog {
@@ -54,6 +58,27 @@ export interface Attendance {
   status: AttendanceStatus;
   recorded_by: string | null;
   created_at?: string;
+  version?: number;
+  pending?: boolean;
+}
+
+export interface AttendanceChange {
+  youth_id: string;
+  session_date: string;
+  status: AttendanceStatus | null;
+  expected_version: number | null;
+}
+
+export interface AttendanceDraftChange extends AttendanceChange {
+  base_status: AttendanceStatus | null;
+}
+
+export interface DailyFollowUpTask {
+  id: string;
+  servant_id: string;
+  youth_id: string;
+  task_date: string;
+  completed_at: string | null;
 }
 
 export interface ServiceSchedule {

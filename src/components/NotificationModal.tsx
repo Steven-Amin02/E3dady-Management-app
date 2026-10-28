@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, Sparkles, Send } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Send } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Portal } from '@/components/Portal';
 
@@ -11,15 +11,9 @@ interface NotificationModalProps {
 }
 
 export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
-  const { currentServant, getAbsentAssignedYouth } = useApp();
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const { currentServant, getAbsentAssignedYouth } = useApp(state => ({ currentServant: state.currentServant, getAbsentAssignedYouth: state.getAbsentAssignedYouth }));
+  const [permission, setPermission] = useState<NotificationPermission>(() => typeof Notification === 'undefined' ? 'default' : Notification.permission);
   const [testSent, setTestSent] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission);
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -151,19 +145,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
               )}
             </div>
 
-            {/* OneSignal Cloud Free-Tier Integration Info */}
-            <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 space-y-2 text-xs font-tajawal text-slate-700 dark:text-slate-300">
-              <div className="flex items-center gap-1.5 font-bold text-sky-800 dark:text-sky-300 font-cairo">
-                <Sparkles className="w-4 h-4 text-sky-600" />
-                <span>تكامل OneSignal المجاني بالكامل (100% Free):</span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                لإرسال إشعارات جماعية حتى عندما يكون التطبيق مغلقاً تماماً، يمكنك إنشاء حساب OneSignal مجاني (يغطي حتى 10,000 مشترك مجاناً) ووضع:
-              </p>
-              <code className="block bg-slate-900 text-sky-300 p-2 rounded-xl text-[10px] font-mono text-left" dir="ltr">
-                NEXT_PUBLIC_ONESIGNAL_APP_ID=your-id
-              </code>
-            </div>
+            <p className="p-4 text-xs text-slate-600 dark:text-slate-300">هذه أداة لاختبار إشعار محلي أثناء فتح التطبيق. لا توجد إشعارات مجدولة أو إرسال عندما يكون التطبيق مغلقاً.</p>
           </div>
 
           <div className="p-4 pt-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">

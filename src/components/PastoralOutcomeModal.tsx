@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/outbox';
 
 import { useState } from 'react';
 import { PastoralOutcomeCategory, Youth } from '@/types/database';
@@ -22,9 +23,10 @@ export function PastoralOutcomeModal({
   initialMethod = 'call',
   onConfirm,
 }: PastoralOutcomeModalProps) {
-  const [selectedOutcome, setSelectedOutcome] = useState<PastoralOutcomeCategory>('encouraged_attending');
+  const [selectedOutcome, setSelectedOutcome] = useState<PastoralOutcomeCategory | null>(null);
   const [method, setMethod] = useState<'call' | 'whatsapp'>(initialMethod);
   const [notes, setNotes] = useState<string>('');
+  const [saveError, setSaveError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   if (!isOpen) return null;
@@ -35,13 +37,17 @@ export function PastoralOutcomeModal({
   };
 
   const handleSave = async () => {
+    if (!selectedOutcome) {
+      setSaveError('اختر نتيجة التواصل أولاً.');
+      return;
+    }
     triggerHaptic('success');
     try {
       setIsSubmitting(true);
       await onConfirm(selectedOutcome, method, notes.trim());
       onClose();
     } catch (err) {
-      console.error('Error saving pastoral outcome:', err);
+      setSaveError(errorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -51,6 +57,7 @@ export function PastoralOutcomeModal({
     <Portal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
         <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden">
+          {saveError && <p role="alert" className="p-3 text-sm text-red-600">{saveError}</p>}
           {/* Header */}
           <div className="flex items-start justify-between p-5 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="space-y-1">
@@ -69,6 +76,8 @@ export function PastoralOutcomeModal({
           <button
             type="button"
             onClick={onClose}
+            data-dialog-close
+            aria-label="إغلاق توثيق نتيجة الافتقاد"
             className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -138,7 +147,7 @@ export function PastoralOutcomeModal({
                 >
                   <span className="text-lg shrink-0">{opt.icon}</span>
                   <div className="space-y-0.5 flex-1 min-w-0">
-                    <div className="text-xs font-bold font-cairo truncate">
+                    <div className="text-xs font-bold font-cairo">
                       {opt.label}
                     </div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 font-tajawal leading-tight">

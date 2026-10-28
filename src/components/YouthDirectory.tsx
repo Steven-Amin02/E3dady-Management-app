@@ -1,8 +1,11 @@
 'use client';
+import { useMutationFeedback } from '@/lib/useMutationFeedback';
 
 import { useState, useMemo, type FormEvent } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
+import { eligibleYouth } from '@/lib/attendanceModel';
+import { normalizeArabic } from '@/lib/arabicUtils';
 import { SchoolYear, Youth } from '@/types/database';
 import {
   Search,
@@ -16,14 +19,19 @@ import {
 import { Portal } from '@/components/Portal';
 
 export function YouthDirectory() {
+  const { run, isPending, error, dismiss } = useMutationFeedback();
   const {
-    youth,
+    youth: allYouth,
+    today,
+    isAdmin,
     servants,
     addYouth,
     updateYouth,
     deleteYouth,
     getYouthWithDetails,
-      } = useApp();
+      } = useApp(s => ({ youth: s.youth, today: s.today, isAdmin: s.isAdmin, servants: s.servants, addYouth: s.addYouth, updateYouth: s.updateYouth, deleteYouth: s.deleteYouth, getYouthWithDetails: s.getYouthWithDetails, attendance: s.attendance }));
+
+  const youth = useMemo(() => eligibleYouth(allYouth, today), [allYouth, today]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SchoolYear | 'all'>('all');
@@ -41,6 +49,7 @@ export function YouthDirectory() {
     school_year: '1st Prep' as SchoolYear,
     assigned_servant_id: '',
     notes: '',
+    joined_on: '',
   });
 
   const openAddModal = () => {
@@ -51,6 +60,7 @@ export function YouthDirectory() {
       school_year: '1st Prep',
       assigned_servant_id: servants[0]?.id || '',
       notes: '',
+      joined_on: today,
     });
     setIsModalOpen(true);
   };
@@ -63,6 +73,7 @@ export function YouthDirectory() {
       school_year: item.school_year,
       assigned_servant_id: item.assigned_servant_id || '',
       notes: item.notes || '',
+      joined_on: item.joined_on || '',
     });
     setIsModalOpen(true);
   };
@@ -74,6 +85,7 @@ export function YouthDirectory() {
       return;
     }
 
+    await run(async () => {
     if (editingYouth) {
       await updateYouth(editingYouth.id, {
         name: formData.name,
@@ -81,6 +93,7 @@ export function YouthDirectory() {
         school_year: formData.school_year,
         assigned_servant_id: formData.assigned_servant_id || null,
         notes: formData.notes,
+        joined_on: formData.joined_on || null,
       });
     } else {
       await addYouth({
@@ -89,31 +102,34 @@ export function YouthDirectory() {
         school_year: formData.school_year,
         assigned_servant_id: formData.assigned_servant_id || null,
         notes: formData.notes,
+        joined_on: formData.joined_on || null,
       });
     }
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    });
   };
 
   const handleDelete = async (id: string) => {
+    await run(async () => {
     await deleteYouth(id);
     setDeleteConfirmId(null);
+    });
   };
 
   // Filtered Youth
   const filteredYouth = useMemo(() => {
     return youth
-      .map(getYouthWithDetails)
       .filter((y) => {
         const matchesSearch =
           !searchQuery ||
-          y.name.includes(searchQuery) ||
+          normalizeArabic(y.name).includes(normalizeArabic(searchQuery)) ||
           y.phone.includes(searchQuery);
         const matchesYear = selectedYear === 'all' || y.school_year === selectedYear;
         const matchesServant =
           selectedServantId === 'all' || y.assigned_servant_id === selectedServantId;
         return matchesSearch && matchesYear && matchesServant;
-      });
+      }).map(getYouthWithDetails);
   }, [youth, searchQuery, selectedYear, selectedServantId, getYouthWithDetails]);
 
   // WhatsApp Link Helper
@@ -125,6 +141,8 @@ export function YouthDirectory() {
 
   return (
     <div className="space-y-4 pb-24 animate-fade-in">
+      {error && <p role="alert" className="fixed top-20 left-4 right-4 z-[100] rounded-xl bg-red-100 p-3 text-sm text-red-900">{error}<button className="mr-2 underline" onClick={dismiss}>إغلاق</button></p>}
+      <p className="text-xs text-slate-500">نسب الحضور في الدليل تخص السجلات المحملة من العام الدراسي الحالي. تصنيف المتابعة يراجع آخر ١٢ جمعة.</p>
       {/* Top Header Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -244,9 +262,9 @@ export function YouthDirectory() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => setDeleteConfirmId(member.id)}
+                      disabled={!isAdmin || isPending} onClick={() => setDeleteConfirmId(member.id)}
                       className="p-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950 text-slate-400 hover:text-rose-600 transition-colors"
-                      title="حذف المخدوم"
+                      title="أرشفة المخدوم مع الاحتفاظ بالسجل"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -357,6 +375,9 @@ export function YouthDirectory() {
                     />
                   </div>
 
+                  <label className="block text-xs">تاريخ الانضمام (اتركه فارغاً إذا كان غير معروف)
+                    <input type="date" value={formData.joined_on} onChange={e => setFormData({ ...formData, joined_on: e.target.value })} className="mt-1 block rounded-xl border p-2 dark:bg-slate-800" />
+                  </label>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -419,7 +440,7 @@ export function YouthDirectory() {
                     إلغاء
                   </button>
                   <button
-                    type="submit"
+                    type="submit" disabled={isPending}
                     className="px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all shadow-md shadow-sky-600/20 active:scale-95"
                   >
                     {editingYouth ? 'حفظ التعديلات' : 'إضافة المخدوم'}
@@ -440,10 +461,10 @@ export function YouthDirectory() {
                 ⚠️
               </div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-cairo">
-                هل أنت متأكد من حذف هذا المخدوم؟
+                هل تريد أرشفة هذا المخدوم؟
               </h4>
               <p className="text-xs text-slate-500 font-tajawal">
-                سيتم حذف جميع سجلات الحضور الخاصة به أيضاً.
+                سيتوقف ظهوره في القائمة الحالية مع الاحتفاظ بسجلات الحضور والافتقاد السابقة.
               </p>
               <div className="flex items-center justify-center gap-2 pt-2">
                 <button
@@ -458,7 +479,7 @@ export function YouthDirectory() {
                   onClick={() => handleDelete(deleteConfirmId)}
                   className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 active:scale-95 transition-all"
                 >
-                  تأكيد الحذف
+                  تأكيد الأرشفة
                 </button>
               </div>
             </div>

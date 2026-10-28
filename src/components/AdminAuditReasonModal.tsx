@@ -28,6 +28,7 @@ export function AdminAuditReasonModal({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (notes.trim().length < 3) return;
     onConfirm(selectedCategory, notes.trim());
   };
 
@@ -46,7 +47,7 @@ export function AdminAuditReasonModal({
                 توثيق تعديل السجل التاريخي
               </h3>
               <p className="text-xs text-slate-500 font-tajawal">
-                {formatDateArabic(sessionDate)} • صلاحية أمين خدمة
+                {formatDateArabic(sessionDate)} • متاح لكل خدام الخدمة
               </p>
             </div>
           </div>
@@ -64,7 +65,7 @@ export function AdminAuditReasonModal({
             <div className="p-5 overflow-y-auto space-y-4">
               {/* Warning info */}
               <p className="text-xs text-slate-600 dark:text-slate-300 font-tajawal leading-relaxed bg-amber-50 dark:bg-amber-950/40 p-3 rounded-2xl border border-amber-200 dark:border-amber-900/60">
-                تعديل سجل مؤرشف يتطلب توثيق السبب لحماية أمان الأرشيف السنوي وسيقيد باسمك في سجل التدقيق التاريخي.
+                تعديل سجل مؤرشف متاح لكل خدام الخدمة، لكنه يتطلب توثيق السبب وسيقيد باسمك في سجل التدقيق التاريخي.
               </p>
 
               {/* Reason categories */}
@@ -102,7 +103,7 @@ export function AdminAuditReasonModal({
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
                   <span>ملاحظات توضيحية إضافية (اختياري):</span>
                 </label>
-                <textarea
+                <textarea required minLength={3}
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}

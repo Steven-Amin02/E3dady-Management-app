@@ -1,3 +1,5 @@
+-- Historical migration: superseded by 20261028_security_and_reliability.sql.
+-- Fresh installations should start with that standalone migration.
 -- ============================================================================
 -- CHURCH YOUTH ATTENDANCE APP (E3DADY) - ULTRA-LIGHTWEIGHT OPTIMIZATION
 -- Migration: 20260927_performance_optimization.sql

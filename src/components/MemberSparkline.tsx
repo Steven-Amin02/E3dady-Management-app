@@ -126,7 +126,7 @@ export function MemberSparkline({
                 ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                 : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
             }`}
-            title={`نسبة الحضور خلال آخر ١٢ أسبوع: ${metrics.attendanceRate}% (${metrics.attendedCount} من ${metrics.totalWindow} لقاء)`}
+            title={`مؤشر الحضور خلال آخر ${windowSize} جمعة: ${metrics.attendanceRate}% (${metrics.attendedCount} من ${metrics.totalWindow} لقاء)، بينها ${metrics.recordedTotal} لقاء مسجل`}
           >
             <span>{metrics.consistencyFraction}</span>
             <span className="text-[9px] opacity-75 font-tajawal">لقاء</span>

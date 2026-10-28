@@ -5,8 +5,6 @@ import {
   HeartHandshake,
   CalendarCheck,
   Users,
-  CalendarDays,
-  ShieldCheck,
   Check
 } from 'lucide-react';
 
@@ -18,7 +16,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
-  const { dailyFollowUpYouth } = useApp();
+  const { dailyFollowUpYouth } = useApp(state => ({ dailyFollowUpYouth: state.dailyFollowUpYouth }));
 
   const isTodayFollowUpDone = dailyFollowUpYouth?.alreadyContactedToday;
   const hasPendingFollowUp = dailyFollowUpYouth && !isTodayFollowUpDone;
@@ -40,16 +38,6 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
       label: 'المخدومين',
       icon: Users,
     },
-    {
-      id: 'schedule' as TabType,
-      label: 'الجدول',
-      icon: CalendarDays,
-    },
-    {
-      id: 'servants' as TabType,
-      label: 'الخدام',
-      icon: ShieldCheck,
-    },
   ];
 
   return (
@@ -65,6 +53,8 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
               <button
                 key={item.id}
                 onClick={() => onSelectTab(item.id)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={item.label}
                 className="relative flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-2xl transition-all duration-200 min-w-[52px] group"
               >
                 {/* Active pill background */}

@@ -1,3 +1,10 @@
+-- Development-only destructive operation. Never use as a production repair.
+BEGIN;
+DO $$ BEGIN
+  IF current_setting('e3dady.allow_destructive_seed',true) IS DISTINCT FROM 'on' THEN
+    RAISE EXCEPTION 'Destructive development operation disabled. See README.md.';
+  END IF;
+END $$;
 -- ============================================================================
 -- CHURCH YOUTH ATTENDANCE APP (E3DADY) - REAL DATA SEED
 -- Generated from excel-sheets/servants.xlsx and excel-sheets/Youth.xlsx
@@ -60,3 +67,5 @@ INSERT INTO public.youth (id, name, phone, school_year, assigned_servant_id, not
   ('20000000-0000-0000-0000-000000000040', 'بيير هاني', '01210684499', '1st Prep', '10000000-0000-0000-0000-000000000001', ''),
   ('20000000-0000-0000-0000-000000000041', 'شنودة', '', '1st Prep', '10000000-0000-0000-0000-000000000001', 'لا يوجد رقم'),
   ('20000000-0000-0000-0000-000000000042', 'كيرلس قريب أميل', '01210049264', '1st Prep', '10000000-0000-0000-0000-000000000002', 'الرقم المرفق هو رقم الام');
+
+COMMIT;

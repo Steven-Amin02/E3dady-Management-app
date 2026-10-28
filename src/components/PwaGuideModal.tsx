@@ -46,8 +46,8 @@ export function PwaGuideModal({ isOpen, onClose }: PwaGuideModalProps) {
               </div>
               <ol className="text-xs text-slate-500 dark:text-slate-400 font-tajawal space-y-1 list-decimal pr-4">
                 <li>اضغط على زر المشاركة (Share) بأسفل متصفح Safari.</li>
-                <li>اختر "إضافة إلى الشاشة الرئيسية" (Add to Home Screen).</li>
-                <li>اضغط "إضافة" (Add) لتثبيت أيقونة الكنيسة على هاتفك.</li>
+                <li>اختر &quot;إضافة إلى الشاشة الرئيسية&quot; (Add to Home Screen).</li>
+                <li>اضغط &quot;إضافة&quot; (Add) لتثبيت أيقونة الكنيسة على هاتفك.</li>
               </ol>
             </div>
 
@@ -59,8 +59,8 @@ export function PwaGuideModal({ isOpen, onClose }: PwaGuideModalProps) {
               </div>
               <ol className="text-xs text-slate-500 dark:text-slate-400 font-tajawal space-y-1 list-decimal pr-4">
                 <li>اضغط على قائمة الثلاث نقاط العلوية في Chrome.</li>
-                <li>اختر "تثبيت التطبيق" (Install App).</li>
-                <li>سيظهر التطبيق كأيقونة مستقلة وتعمل في وضع عدم الاتصال.</li>
+                <li>اختر &quot;تثبيت التطبيق&quot; (Install App).</li>
+                <li>افتح التطبيق وسجّل الدخول أولاً لتحميل البيانات المطلوبة للعمل دون اتصال.</li>
               </ol>
             </div>
           </div>

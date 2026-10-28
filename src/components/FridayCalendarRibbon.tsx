@@ -1,7 +1,9 @@
 'use client';
+import { useApp } from '@/context/AppContext';
 
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Attendance } from '@/types/database';
+import { Attendance, Youth } from '@/types/database';
+import { eligibleYouth } from '@/lib/attendanceModel';
 import {
   generateAcademicFridays,
   getFridayTurnoutStats
@@ -21,6 +23,7 @@ interface FridayCalendarRibbonProps {
   totalYouthCount: number;
   lastFridayDate: string;
   nextFridayDate: string;
+  youth?: Youth[];
 }
 
 export function FridayCalendarRibbon({
@@ -30,18 +33,23 @@ export function FridayCalendarRibbon({
   totalYouthCount,
   lastFridayDate,
   nextFridayDate,
+  youth,
 }: FridayCalendarRibbonProps) {
+  const today = useApp(s => s.today);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedTerm, setSelectedTerm] = useState<'all' | 'fall' | 'lent' | 'summer'>('all');
 
   // Generate the 36-40 academic Fridays
-  const allFridays = useMemo(() => generateAcademicFridays(), []);
+  const allFridays = useMemo(() => generateAcademicFridays(new Date(today + 'T12:00:00Z')), [today]);
 
-  // Filtered by selected Trimester
+  // Keep the picker focused on the selected week while preserving horizontal access
+  // to the full academic calendar.
   const visibleFridays = useMemo(() => {
-    if (selectedTerm === 'all') return allFridays;
-    return allFridays.filter((f) => f.term === selectedTerm);
-  }, [allFridays, selectedTerm]);
+    const filtered = selectedTerm === 'all' ? allFridays : allFridays.filter((f) => f.term === selectedTerm);
+    const selectedIndex = filtered.findIndex(f => f.date === selectedDate);
+    const anchor = selectedIndex >= 0 ? selectedIndex : Math.max(0, filtered.findIndex(f => f.date >= nextFridayDate));
+    return filtered.slice(Math.max(0, anchor - 3), Math.min(filtered.length, anchor + 5));
+  }, [allFridays, selectedDate, selectedTerm, nextFridayDate]);
 
   // Auto-scroll to selected Friday node on mount or selection
   useEffect(() => {
@@ -64,6 +72,17 @@ export function FridayCalendarRibbon({
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-card p-3 sm:p-4 space-y-3 overflow-hidden">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold text-sky-700 dark:text-sky-300">اختيار الجمعة</p>
+          <p className="text-[11px] text-slate-500">اختر جلسة سابقة أو الجمعة القادمة</p>
+        </div>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => onSelectDate(lastFridayDate)} className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-bold dark:border-slate-700">الماضية</button>
+          <button type="button" onClick={() => onSelectDate(nextFridayDate)} className="rounded-lg bg-sky-700 px-2 py-1 text-[11px] font-bold text-white">القادمة</button>
+        </div>
+      </div>
+
       {/* ── TOP BAR: Trimester Jump Tabs & Anchor Strip ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         {/* Trimester Tabs */}
@@ -139,7 +158,7 @@ export function FridayCalendarRibbon({
       >
         {visibleFridays.map((fSession) => {
           const isSelected = selectedDate === fSession.date;
-          const stats = getFridayTurnoutStats(attendance, totalYouthCount, fSession.date);
+          const stats = getFridayTurnoutStats(attendance, youth ? eligibleYouth(youth, fSession.date).length : totalYouthCount, fSession.date);
 
           // Card Health Styling
           let healthBadgeStyle = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
@@ -165,7 +184,8 @@ export function FridayCalendarRibbon({
               type="button"
               onClick={() => onSelectDate(fSession.date)}
               style={{ scrollSnapAlign: 'center' }}
-              className={`relative shrink-0 w-[110px] sm:w-[125px] p-2.5 rounded-2xl border text-right transition-all duration-200 active:scale-95 flex flex-col justify-between gap-2 ${borderHealth} ${isSelected
+              aria-label={`${fSession.fullLabel}، ${fSession.lifecycleLabel}`}
+              className={`relative shrink-0 w-[92px] sm:w-[110px] p-2 rounded-2xl border text-right transition-all duration-200 active:scale-95 flex flex-col justify-between gap-1.5 ${borderHealth} ${isSelected
                   ? 'bg-gradient-to-b from-sky-50/90 to-white dark:from-sky-950/40 dark:to-slate-900 shadow-md ring-2 ring-sky-500'
                   : 'bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/80'
                 }`}
@@ -202,19 +222,19 @@ export function FridayCalendarRibbon({
 
               {/* Attendance percentage indicator */}
               <div className="w-full pt-1 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                {stats.isRecorded ? (
+                {fSession.lifecycleState === 'upcoming' ? (
+                  <span className="text-[10px] text-slate-400 font-tajawal">لم تبدأ</span>
+                ) : stats.completion === 'empty' ? (
+                  <span className="text-[10px] text-slate-400 font-tajawal">لم يسجل</span>
+                ) : (
                   <>
                     <span className="text-[10px] font-bold font-mono text-slate-700 dark:text-slate-300">
                       {stats.presentCount}/{totalYouthCount}
                     </span>
-                    <span className={`text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-md ${healthBadgeStyle}`}>
-                      {stats.percentage}%
+                    <span className={`text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-md ${stats.completion === 'partial' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300' : healthBadgeStyle}`}>
+                      {stats.completion === 'partial' ? `${stats.recordedTotal}/${totalYouthCount}` : `${stats.percentage}%`}
                     </span>
                   </>
-                ) : (
-                  <span className="text-[10px] text-slate-400 font-tajawal">
-                    {fSession.lifecycleState === 'upcoming' ? 'مجدول' : 'قيد التسجيل'}
-                  </span>
                 )}
               </div>
 

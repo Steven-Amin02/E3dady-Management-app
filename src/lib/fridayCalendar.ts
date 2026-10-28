@@ -1,5 +1,6 @@
-import { toLocalDateString, parseLocalDate } from '@/lib/utils';
+import { serviceDate, dateDistance, academicYearStart, addDays, upcomingFriday } from '@/lib/serviceDate';
 import { Attendance } from '@/types/database';
+import { indexAttendance } from '@/lib/attendanceModel';
 
 export type LifecycleState = 'upcoming' | 'live' | 'grace' | 'locked';
 
@@ -38,15 +39,7 @@ export function getSessionLifecycleState(sessionDateStr: string, now = new Date(
   state: LifecycleState;
   label: string;
 } {
-  const sessionDate = parseLocalDate(sessionDateStr);
-  sessionDate.setHours(0, 0, 0, 0);
-  const sessionFridayTime = sessionDate.getTime();
-
-  // Strip time from now using local date
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const nowTime = today.getTime();
-
-  const diffDays = Math.round((nowTime - sessionFridayTime) / (1000 * 60 * 60 * 24));
+  const diffDays = dateDistance(serviceDate(now), sessionDateStr);
 
   if (diffDays < 0) {
     return { state: 'upcoming', label: 'مجدول قادماً' };
@@ -66,26 +59,12 @@ export function getSessionLifecycleState(sessionDateStr: string, now = new Date(
  * Generates the full academic year Friday sessions list (from September to August)
  */
 export function generateAcademicFridays(referenceDate = new Date()): FridaySessionInfo[] {
-  const currentYear = referenceDate.getFullYear();
-  // Start from September of (currentYear - (currentMonth < 8 ? 1 : 0))
-  const currentMonth = referenceDate.getMonth(); // 0-indexed, 8 is September
-  const startYear = currentMonth >= 8 ? currentYear : currentYear - 1;
-
-  // Let's generate 40 consecutive Fridays spanning September through June/July
-  const startDate = new Date(startYear, 8, 1, 12, 0, 0); // Sept 1st noon to avoid offset shift
-  // Find first Friday in September
-  const dayOfWeek = startDate.getDay();
-  const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
-  startDate.setDate(startDate.getDate() + daysUntilFriday);
-
+  const start = academicYearStart(serviceDate(referenceDate));
+  const end = `${Number(start.slice(0, 4)) + 1}-09-01`;
   const fridays: FridaySessionInfo[] = [];
-
-  for (let i = 0; i < 36; i++) {
-    const fDate = new Date(startDate);
-    fDate.setDate(startDate.getDate() + i * 7);
-
-    const isoStr = toLocalDateString(fDate);
-    const month = fDate.getMonth(); // 0 to 11
+  for (let isoStr = upcomingFriday(start); isoStr < end; isoStr = addDays(isoStr, 7)) {
+    const fDate = new Date(isoStr + 'T12:00:00Z');
+    const month = fDate.getUTCMonth();
 
     // Trimester classification
     let term: 'fall' | 'lent' | 'summer' = 'fall';
@@ -102,8 +81,8 @@ export function generateAcademicFridays(referenceDate = new Date()): FridaySessi
       termLabel = 'فصل الخماسين والنشاط الصيفي';
     }
 
-    const dayNumber = String(fDate.getDate());
-    const monthArabic = new Intl.DateTimeFormat('ar-EG', { month: 'short' }).format(fDate);
+    const dayNumber = String(fDate.getUTCDate());
+    const monthArabic = new Intl.DateTimeFormat('ar-EG', { month: 'short', timeZone: 'UTC' }).format(fDate);
     const lifecycle = getSessionLifecycleState(isoStr, referenceDate);
 
     fridays.push({
@@ -127,7 +106,7 @@ export type FridaySessionInfo = FridaySessionMeta;
  * Calculates turnout percentage and counts for a specific Friday from attendance array
  */
 export function getFridayTurnoutStats(attendance: Attendance[], youthCount: number, sessionDate: string) {
-  const sessionRecords = attendance.filter((a) => a.session_date === sessionDate);
+  const sessionRecords = indexAttendance(attendance).byDate.get(sessionDate) ?? [];
   const presentCount = sessionRecords.filter((a) => a.status === 'present').length;
   const absentCount = sessionRecords.filter((a) => a.status === 'absent').length;
   const excusedCount = sessionRecords.filter((a) => a.status === 'excused').length;
@@ -135,6 +114,11 @@ export function getFridayTurnoutStats(attendance: Attendance[], youthCount: numb
 
   const percentage = youthCount > 0 ? Math.round((presentCount / youthCount) * 100) : 0;
   const isRecorded = recordedTotal > 0;
+  const completion: 'empty' | 'partial' | 'complete' = recordedTotal === 0
+    ? 'empty'
+    : recordedTotal < youthCount
+      ? 'partial'
+      : 'complete';
 
   // Turnout color classification
   let health: 'emerald' | 'indigo' | 'amber' | 'neutral' = 'neutral';
@@ -155,6 +139,7 @@ export function getFridayTurnoutStats(attendance: Attendance[], youthCount: numb
     recordedTotal,
     percentage,
     isRecorded,
+    completion,
     health,
   };
 }

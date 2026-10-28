@@ -93,6 +93,15 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring rounded-sm;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* ─── Custom Scrollbars ───────────────────────────── */
@@ -199,3 +208,6 @@
   content-visibility: auto;
   contain-intrinsic-size: 0 76px;
 }
+
+/* System Arabic fonts keep builds and offline visits independent of external font hosts. */
+:root { --font-cairo: Tahoma, Arial, sans-serif; --font-tajawal: Tahoma, Arial, sans-serif; }

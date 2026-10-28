@@ -1,3 +1,4 @@
+import { serviceHour } from '@/lib/serviceDate';
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -95,7 +96,7 @@ export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'warning' =
       else if (type === 'medium') navigator.vibrate(45);
       else if (type === 'success') navigator.vibrate([30, 40, 30]);
       else if (type === 'warning') navigator.vibrate([60, 50, 60]);
-    } catch (_) {}
+    } catch {}
   }
 }
 
@@ -105,6 +106,6 @@ export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'warning' =
  * 12:00 - 03:59 -> 'مساء الخير' (Evening / Night)
  */
 export function getTimeBasedGreeting(date = new Date()): 'صباح الخير' | 'مساء الخير' {
-  const hour = date.getHours();
+  const hour = serviceHour(date);
   return hour >= 4 && hour < 12 ? 'صباح الخير' : 'مساء الخير';
 }

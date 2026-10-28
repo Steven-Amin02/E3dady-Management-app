@@ -1,3 +1,5 @@
+-- Historical migration: superseded by 20261028_security_and_reliability.sql.
+-- Fresh installations should start with that standalone migration.
 -- ============================================================================
 -- CHURCH YOUTH FELLOWSHIP (إعدادي - E3DADY)
 -- MIGRATION: Shared Fellowship Attendance & Daily 1-Person Follow-Up Rotation
@@ -126,7 +128,7 @@ BEGIN
     IF v_diff = 0 THEN
         v_diff := 7;
     END IF;
-    v_last_friday := p_target_date - (v_diff * INTERVAL '1 day')::DATE;
+    v_last_friday := p_target_date - v_diff;
 
     RETURN QUERY
     WITH assigned_pool AS (

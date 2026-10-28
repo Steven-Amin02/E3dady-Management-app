@@ -1,20 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { SignIn } from '@/components/SignIn';
+import { SyncStatus } from '@/components/SyncStatus';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { Header } from '@/components/Header';
 import { CrossIcon } from '@/components/CrossIcon';
 import { BottomNav, TabType } from '@/components/BottomNav';
 import { DailyFollowUp } from '@/components/DailyFollowUp';
-import { WeeklyAttendance } from '@/components/WeeklyAttendance';
-import { YouthDirectory } from '@/components/YouthDirectory';
-import { ServiceScheduleView } from '@/components/ServiceScheduleView';
-import { ServantsManager } from '@/components/ServantsManager';
-import { NotificationModal } from '@/components/NotificationModal';
-import { PwaGuideModal } from '@/components/PwaGuideModal';
+const WeeklyAttendance = dynamic(() => import('@/components/WeeklyAttendance').then(m => m.WeeklyAttendance));
+const YouthDirectory = dynamic(() => import('@/components/YouthDirectory').then(m => m.YouthDirectory));
+const ServiceScheduleView = dynamic(() => import('@/components/ServiceScheduleView').then(m => m.ServiceScheduleView));
+const ServantsManager = dynamic(() => import('@/components/ServantsManager').then(m => m.ServantsManager));
+const NotificationModal = dynamic(() => import('@/components/NotificationModal').then(m => m.NotificationModal));
+const PwaGuideModal = dynamic(() => import('@/components/PwaGuideModal').then(m => m.PwaGuideModal));
 
 function MainApp() {
-  const { isLoading } = useApp();
+  const { isLoading, currentServant } = useApp(s => ({ isLoading: s.isLoading, currentServant: s.currentServant }));
   const [activeTab, setActiveTab] = useState<TabType>('followup');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isPwaGuideOpen, setIsPwaGuideOpen] = useState(false);
@@ -51,16 +54,20 @@ function MainApp() {
     );
   }
 
+  if (!currentServant) return <SignIn />;
+
   return (
     <div className="min-h-screen flex flex-col app-bg font-cairo selection:bg-sky-500 selection:text-white">
       {/* Sticky Top Header */}
       <Header
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         onOpenPwaGuide={() => setIsPwaGuideOpen(true)}
+        onNavigate={setActiveTab}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-3.5 sm:px-5 pt-4">
+        <SyncStatus />
         <div key={activeTab} className="tab-content">
           {activeTab === 'followup' && (
             <DailyFollowUp
@@ -79,14 +86,14 @@ function MainApp() {
       <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
 
       {/* Modals */}
-      <NotificationModal
+      {isNotificationsOpen && <NotificationModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
-      />
-      <PwaGuideModal
+      />}
+      {isPwaGuideOpen && <PwaGuideModal
         isOpen={isPwaGuideOpen}
         onClose={() => setIsPwaGuideOpen(false)}
-      />
+      />}
     </div>
   );
 }

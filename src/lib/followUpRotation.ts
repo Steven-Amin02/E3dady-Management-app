@@ -4,7 +4,8 @@ import {
   calculateMemberSparkline,
   MemberSparklineMetrics,
 } from '@/lib/pastoralAnalytics';
-import { toLocalDateString, parseLocalDate } from '@/lib/utils';
+import { serviceDate, precedingFriday, dateDistance } from '@/lib/serviceDate';
+import { indexAttendance, attendanceKey } from '@/lib/attendanceModel';
 
 export interface DailyFollowUpCandidate {
   youth: Youth;
@@ -38,14 +39,7 @@ export function hashString(str: string): number {
  * Calculates the preceding Friday date string (YYYY-MM-DD)
  */
 export function getPrecedingFridayDate(referenceDate = new Date()): string {
-  const d = new Date(referenceDate);
-  const day = d.getDay(); // 0 is Sunday, 5 is Friday
-  let diff = (day + 7 - 5) % 7;
-  if (diff === 0) {
-    diff = 7; // If today is Friday, the previous completed meeting was 7 days ago
-  }
-  d.setDate(d.getDate() - diff);
-  return toLocalDateString(d);
+  return precedingFriday(serviceDate(referenceDate));
 }
 
 /**
@@ -70,38 +64,30 @@ export function selectDailyFollowUpYouth(
     return null;
   }
 
-  const todayStr = targetDateStr || toLocalDateString(new Date());
-  const todayDate = parseLocalDate(todayStr);
-  const todayTimestamp = todayDate.getTime();
-  const lastFridayDate = getPrecedingFridayDate(todayDate);
-  const lastFridayTimestamp = parseLocalDate(lastFridayDate).getTime();
+  const todayStr = targetDateStr || serviceDate();
+  const lastFridayDate = precedingFriday(todayStr);
+  const index = indexAttendance(attendance);
 
   // Filter only youth assigned to this servant
-  const myYouth = assignedYouth.filter((y) => y.assigned_servant_id === servantId);
+  const myYouth = assignedYouth.filter((y) => y.assigned_servant_id === servantId && (!y.joined_on || y.joined_on <= todayStr) && (!y.left_on || y.left_on > todayStr));
   if (myYouth.length === 0) return null;
 
   // Build candidate items with automated pastoral risk triage evaluation
   const candidates: DailyFollowUpCandidate[] = myYouth.map((y) => {
     // Check attendance for last Friday
-    const lastAtt = attendance.find(
-      (a) => a.youth_id === y.id && a.session_date === lastFridayDate
-    );
+    const lastAtt = index.byKey.get(attendanceKey(y.id, lastFridayDate));
     const lastFridayStatus: AttendanceStatus | 'unrecorded' = lastAtt ? lastAtt.status : 'unrecorded';
     const isAbsentLastFriday = lastFridayStatus === 'absent';
 
     // Contact time calculations
-    const contactTimestamp = y.last_contacted_at ? new Date(y.last_contacted_at).getTime() : 0;
-    const contactedToday = Boolean(
-      y.last_contacted_at && y.last_contacted_at.startsWith(todayStr)
-    );
-    const contactedSinceAbsence = contactTimestamp >= lastFridayTimestamp;
-    const daysSinceContact = contactTimestamp > 0
-      ? Math.floor((todayTimestamp - contactTimestamp) / (1000 * 60 * 60 * 24))
-      : 999;
+    const contactDate = y.last_contacted_at ? serviceDate(new Date(y.last_contacted_at)) : '';
+    const contactedToday = contactDate === todayStr;
+    const contactedSinceAbsence = Boolean(contactDate && contactDate >= lastFridayDate);
+    const daysSinceContact = contactDate ? dateDistance(todayStr, contactDate) : 999;
 
     // Evaluate Pastoral Risk Triage
     const triage = evaluateYouthPastoralRisk(y, attendance, lastFridayDate);
-    const sparkline = calculateMemberSparkline(y.id, attendance, 12, lastFridayDate);
+
 
     // Determine Priority Rank based on Triage Category
     let priorityRank: 1 | 2 | 3 | 4 | 5 = 5;
@@ -145,7 +131,7 @@ export function selectDailyFollowUpYouth(
       triageTag: triage.meta.tag,
       consecutiveAbsences: triage.consecutiveAbsences,
       recentRate: triage.recentRate,
-      sparklineMetrics: sparkline,
+
     };
   });
 
@@ -174,5 +160,6 @@ export function selectDailyFollowUpYouth(
     return hashA - hashB;
   });
 
-  return candidates[0] || null;
+  const selected = candidates[0];
+  return selected ? { ...selected, sparklineMetrics: calculateMemberSparkline(selected.youth.id, attendance, 12, lastFridayDate) } : null;
 }

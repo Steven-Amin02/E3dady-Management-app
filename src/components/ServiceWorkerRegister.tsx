@@ -8,14 +8,9 @@ export function ServiceWorkerRegister() {
       return;
     }
 
-    const isLocalhost =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname.startsWith('192.168.');
-
     // In development or on local network dev, unregister service workers and purge caches
     // to prevent stale Turbopack/HMR chunks from causing runtime ReferenceErrors
-    if (process.env.NODE_ENV === 'development' || isLocalhost) {
+    if (process.env.NODE_ENV === 'development') {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const registration of registrations) {
           registration.unregister();
@@ -24,9 +19,7 @@ export function ServiceWorkerRegister() {
 
       if ('caches' in window) {
         caches.keys().then((keys) => {
-          for (const key of keys) {
-            caches.delete(key);
-          }
+          for (const key of keys.filter(key => key.startsWith('e3dady-'))) void caches.delete(key);
         });
       }
       return;

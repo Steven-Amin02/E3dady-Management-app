@@ -1,8 +1,9 @@
 'use client';
+import { useMutationFeedback } from '@/lib/useMutationFeedback';
 
 import { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateArabic, toLocalDateString } from '@/lib/utils';
+import { formatDateArabic } from '@/lib/utils';
 import { ServiceSchedule } from '@/types/database';
 import {
   Plus,
@@ -13,8 +14,10 @@ import {
   Clock,
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
+import { addDays, dayOfWeek, validDate } from '@/lib/serviceDate';
 
 export function ServiceScheduleView() {
+  const { run, isPending, error, dismiss } = useMutationFeedback();
   const {
     schedules,
     servants,
@@ -23,7 +26,7 @@ export function ServiceScheduleView() {
     updateSchedule,
     deleteSchedule,
     nextFridayDate
-  } = useApp();
+  } = useApp(s => ({ schedules: s.schedules, servants: s.servants, isAdmin: s.isAdmin, addSchedule: s.addSchedule, updateSchedule: s.updateSchedule, deleteSchedule: s.deleteSchedule, nextFridayDate: s.nextFridayDate }));
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ServiceSchedule | null>(null);
@@ -45,9 +48,7 @@ export function ServiceScheduleView() {
       const sortedDates = schedules.map((s) => s.date).sort();
       const maxDate = sortedDates[sortedDates.length - 1];
       if (maxDate >= nextFridayDate) {
-        const d = new Date(maxDate);
-        d.setDate(d.getDate() + 7);
-        defaultDate = toLocalDateString(d);
+        defaultDate = addDays(maxDate, 7);
       }
     }
 
@@ -73,11 +74,12 @@ export function ServiceScheduleView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.lesson_title.trim() || !formData.date) {
+    if (!formData.lesson_title.trim() || !validDate(formData.date) || dayOfWeek(formData.date) !== 5) {
       alert('يرجى تحديد التاريخ وعنوان الموضوع');
       return;
     }
 
+    await run(async () => {
     if (editingSchedule) {
       await updateSchedule(editingSchedule.id, {
         date: formData.date,
@@ -94,12 +96,15 @@ export function ServiceScheduleView() {
       });
     }
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    });
   };
 
   const handleDelete = async (id: string) => {
+    await run(async () => {
     await deleteSchedule(id);
     setDeleteId(null);
+    });
   };
 
   // Sorted schedules: Newest and future dates at the top, older underneath
@@ -117,6 +122,7 @@ export function ServiceScheduleView() {
 
   return (
     <div className="space-y-4 pb-24 animate-fade-in">
+      {error && <p role="alert" className="fixed top-20 left-4 right-4 z-[100] rounded-xl bg-red-100 p-3 text-sm text-red-900">{error}<button className="mr-2 underline" onClick={dismiss}>إغلاق</button></p>}
       {/* Top Banner */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -323,7 +329,7 @@ export function ServiceScheduleView() {
                     إلغاء
                   </button>
                   <button
-                    type="submit"
+                    type="submit" disabled={isPending}
                     className="px-5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md shadow-amber-600/20 active:scale-95"
                   >
                     {editingSchedule ? 'حفظ التعديلات' : 'إضافة للجدول'}

@@ -1,4 +1,5 @@
 'use client';
+import { useMutationFeedback } from '@/lib/useMutationFeedback';
 
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -12,13 +13,12 @@ import {
   Trash2,
   Users,
   Info,
-  LogIn,
-  CheckCircle,
 } from 'lucide-react';
 import { Portal } from '@/components/Portal';
 import { formatEgyptianPhoneForWhatsApp } from '@/lib/utils';
 
 export function ServantsManager() {
+  const { run, isPending, error, dismiss } = useMutationFeedback();
   const {
     servants,
     youth,
@@ -27,8 +27,8 @@ export function ServantsManager() {
     addServant,
     updateServant,
     deleteServant,
-    loginServant,
-  } = useApp();
+    promoteAcademicYear,
+  } = useApp(s => ({ servants: s.servants, youth: s.youth, currentServant: s.currentServant, isAdmin: s.isAdmin, addServant: s.addServant, updateServant: s.updateServant, deleteServant: s.deleteServant, promoteAcademicYear: s.promoteAcademicYear }));
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingServant, setEditingServant] = useState<Servant | null>(null);
@@ -55,12 +55,14 @@ export function ServantsManager() {
       alert('يرجى كتابة الاسم ورقم الهاتف');
       return;
     }
+    await run(async () => {
     if (editingServant) {
       await updateServant(editingServant.id, formData);
     } else {
       await addServant(formData);
     }
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -68,8 +70,10 @@ export function ServantsManager() {
       alert('لا يمكن حذف آخر خادم بالخدمة');
       return;
     }
+    await run(async () => {
     await deleteServant(id);
     setDeleteId(null);
+    });
   };
 
   const getWhatsAppLink = (phone: string, name: string) => {
@@ -81,6 +85,11 @@ export function ServantsManager() {
   return (
     <div className="space-y-4 pb-24 animate-fade-in">
 
+      {error && <p role="alert" className="fixed top-20 left-4 right-4 z-[100] rounded-xl bg-red-100 p-3 text-sm text-red-900">{error}<button className="mr-2 underline" onClick={dismiss}>إغلاق</button></p>}
+      {isAdmin && <p className="rounded-xl border p-3 text-xs">عند بدء سنة دراسية جديدة في سبتمبر، رحّل الطلاب المستمرين واحتفظ بفصول السنوات السابقة.
+        <button className="mr-2 underline" disabled={isPending} onClick={() => {
+          if (window.confirm('ترحيل الطلاب الذين لم يُسجلوا في العام الحالي، وأرشفة طلاب ثالثة؟ لا تتكرر العملية في العام نفسه.')) void run(promoteAcademicYear);
+        }}>ترحيل العام الدراسي الحالي</button></p>}
       {/* ── Page Header ──────────────────────────── */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-card overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500" />
@@ -116,7 +125,7 @@ export function ServantsManager() {
         <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200 font-tajawal">
           <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <span>
-            أنت مسجل بحساب خادم عادي. للوصول لصلاحيات الإدارة، بدّل للحساب الإداري من القائمة العلوية.
+            أنت مسجل بحساب خادم. إدارة الحسابات متاحة لمسؤول الخدمة فقط.
           </span>
         </div>
       )}
@@ -188,7 +197,7 @@ export function ServantsManager() {
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setDeleteId(servant.id)}
+                        disabled={isCurrentUser || isPending} onClick={() => setDeleteId(servant.id)}
                         className="p-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-500 transition-colors"
                         title="حذف"
                       >
@@ -211,20 +220,7 @@ export function ServantsManager() {
 
                 {/* Footer actions */}
                 <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                  {!isCurrentUser ? (
-                    <button
-                      onClick={() => loginServant(servant.id)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline font-tajawal"
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      تبديل للحساب
-                    </button>
-                  ) : (
-                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold font-tajawal">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      الحساب النشط
-                    </span>
-                  )}
+                  {isCurrentUser && <span className="text-xs text-emerald-600">الحساب النشط</span>}
 
                   <div className="flex items-center gap-1.5">
                     <a
@@ -326,7 +322,7 @@ export function ServantsManager() {
                     إلغاء
                   </button>
                   <button
-                    type="submit"
+                    type="submit" disabled={isPending}
                     className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all shadow-sm shadow-indigo-600/25 active:scale-95"
                   >
                     {editingServant ? 'حفظ التعديلات' : 'إضافة الخادم'}

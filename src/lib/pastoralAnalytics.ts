@@ -1,5 +1,6 @@
 import { Attendance, AttendanceStatus, PastoralOutcomeCategory, PastoralTriageCategory, Youth } from '@/types/database';
-import { toLocalDateString, parseLocalDate } from '@/lib/utils';
+import { serviceDate, dateDistance, dayOfWeek } from '@/lib/serviceDate';
+import { indexAttendance, attendanceKey, fridayWindow, consecutiveAbsences as countAbsences } from '@/lib/attendanceModel';
 
 /**
  * Metadata & UI configuration for Pastoral Contact Outcomes
@@ -152,22 +153,7 @@ export const PASTORAL_TRIAGE_CONFIG: Record<PastoralTriageCategory, PastoralTria
  * Sorted chronologically (oldest to newest).
  */
 export function getPastFridayDates(count = 12, referenceDateStr?: string): string[] {
-  const dates: string[] = [];
-  const ref = referenceDateStr ? parseLocalDate(referenceDateStr) : new Date();
-
-  // Find the closest Friday on or before reference date
-  const current = new Date(ref);
-  const day = current.getDay();
-  const diffToFriday = (day + 7 - 5) % 7;
-  current.setDate(current.getDate() - diffToFriday);
-
-  for (let i = 0; i < count; i++) {
-    const fDate = new Date(current);
-    fDate.setDate(current.getDate() - i * 7);
-    dates.unshift(toLocalDateString(fDate));
-  }
-
-  return dates;
+  return fridayWindow(count, referenceDateStr ?? serviceDate());
 }
 
 /**
@@ -197,13 +183,24 @@ export interface MemberSparklineMetrics {
 /**
  * Computes 12-week longitudinal session micro-sparkline metrics for a student
  */
+const sparklineCache = new WeakMap<Attendance[], Map<string, MemberSparklineMetrics>>();
+const monthFormatter = new Intl.DateTimeFormat('ar-EG', { month: 'short', timeZone: 'UTC' });
+const dateLabels = new Map<string, string>();
+
 export function calculateMemberSparkline(
   youthId: string,
   attendance: Attendance[],
   windowSize = 12,
   referenceDateStr?: string
 ): MemberSparklineMetrics {
-  const fridayDates = getPastFridayDates(windowSize, referenceDateStr);
+  const reference = referenceDateStr ?? serviceDate();
+  const cache = sparklineCache.get(attendance) ?? new Map<string, MemberSparklineMetrics>();
+  sparklineCache.set(attendance, cache);
+  const cacheKey = `${youthId}/${windowSize}/${reference}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  const index = indexAttendance(attendance);
+  const fridayDates = getPastFridayDates(windowSize, reference);
 
   let attendedCount = 0;
   let absentCount = 0;
@@ -211,7 +208,7 @@ export function calculateMemberSparkline(
   let recordedTotal = 0;
 
   const sessions: SparklineSession[] = fridayDates.map((fDate) => {
-    const record = attendance.find((a) => a.youth_id === youthId && a.session_date === fDate);
+    const record = index.byKey.get(attendanceKey(youthId, fDate));
     const status: AttendanceStatus | 'unrecorded' = record ? record.status : 'unrecorded';
 
     if (record) {
@@ -222,13 +219,16 @@ export function calculateMemberSparkline(
     }
 
     // Format Arabic day & short month e.g. "25 سبتمبر"
-    const parsed = new Date(fDate + 'T00:00:00');
-    const day = parsed.getDate();
-    const monthShort = new Intl.DateTimeFormat('ar-EG', { month: 'short' }).format(parsed);
+    let label = dateLabels.get(fDate);
+    if (!label) {
+      const parsed = new Date(`${fDate}T12:00:00Z`);
+      label = `${parsed.getUTCDate()} ${monthFormatter.format(parsed)}`;
+      dateLabels.set(fDate, label);
+    }
 
     return {
       date: fDate,
-      dayMonth: `${day} ${monthShort}`,
+      dayMonth: label,
       status,
       recordedBy: record?.recorded_by,
     };
@@ -240,7 +240,7 @@ export function calculateMemberSparkline(
 
   for (let i = sessions.length - 1; i >= 0; i--) {
     const st = sessions[i].status;
-    if (st === 'unrecorded') continue;
+    if (st === 'unrecorded') break;
 
     if (streakType === 'none') {
       streakType = st;
@@ -263,10 +263,10 @@ export function calculateMemberSparkline(
     streakLabel = streakType === 'present' ? 'حاضر آخر لقاء' : 'غائب آخر لقاء';
   }
 
-  const attendanceRate = recordedTotal > 0 ? Math.round((attendedCount / recordedTotal) * 100) : 0;
+  const attendanceRate = windowSize > 0 ? Math.round((attendedCount / windowSize) * 100) : 0;
   const consistencyFraction = `${attendedCount}/${windowSize}`;
 
-  return {
+  const result: MemberSparklineMetrics = {
     sessions,
     attendedCount,
     absentCount,
@@ -279,6 +279,8 @@ export function calculateMemberSparkline(
     streakCount,
     streakLabel,
   };
+  cache.set(cacheKey, result);
+  return result;
 }
 
 /**
@@ -303,34 +305,28 @@ export function evaluateYouthPastoralRisk(
   attendance: Attendance[],
   referenceDateStr?: string
 ): YouthTriageEvaluation {
-  const memberAttendance = attendance.filter((a) => a.youth_id === youthItem.id);
-  const sortedSessions = [...memberAttendance].sort((a, b) => b.session_date.localeCompare(a.session_date));
-
-  // 1. Calculate consecutive absences from newest backward
-  let consecutiveAbsences = 0;
-  for (const att of sortedSessions) {
-    if (att.status === 'absent') {
-      consecutiveAbsences++;
-    } else if (att.status === 'present') {
-      break;
-    }
-  }
+  const reference = referenceDateStr ?? serviceDate();
+  const windowStart = fridayWindow(12, reference)[0];
+  const memberAttendance = (indexAttendance(attendance).byYouth.get(youthItem.id) ?? [])
+    .filter(a => a.session_date >= windowStart && a.session_date <= reference && dayOfWeek(a.session_date) === 5 &&
+      (!youthItem.joined_on || a.session_date >= youthItem.joined_on) && (!youthItem.left_on || a.session_date < youthItem.left_on));
+  const consecutiveAbsences = countAbsences(youthItem.id, attendance, reference);
 
   // 2. Historical attendance rate
   const totalSessions = memberAttendance.length;
-  const presentSessions = memberAttendance.filter((a) => a.status === 'present').length;
-  const historicalRate = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
+  const recentDates = new Set(fridayWindow(6, reference));
+  const recent = memberAttendance.filter(a => recentDates.has(a.session_date));
+  const historical = memberAttendance.filter(a => !recentDates.has(a.session_date));
+  const baseline = historical.length >= 6 ? historical : memberAttendance;
+  const historicalRate = baseline.length ? Math.round(baseline.filter(a => a.status === 'present').length / baseline.length * 100) : 0;
 
   // 3. Last 6 weeks rate
-  const last6Sessions = sortedSessions.slice(0, 6);
-  const last6Present = last6Sessions.filter((s) => s.status === 'present').length;
-  const recentRate = last6Sessions.length > 0 ? Math.round((last6Present / last6Sessions.length) * 100) : historicalRate;
+  const recentRate = recent.length ? Math.round(recent.filter(a => a.status === 'present').length / recent.length * 100) : 0;
 
   // 4. Newcomer check (created recently or <= 4 recorded sessions and attended at least 1)
-  const refDate = referenceDateStr ? new Date(referenceDateStr).getTime() : Date.now();
-  const createdDate = youthItem.created_at ? new Date(youthItem.created_at).getTime() : 0;
-  const daysSinceCreated = createdDate ? Math.floor((refDate - createdDate) / (1000 * 60 * 60 * 24)) : 999;
-  const isNewcomer = daysSinceCreated <= 60 || totalSessions <= 4;
+  const createdDate = youthItem.joined_on || (youthItem.created_at ? serviceDate(new Date(youthItem.created_at)) : '');
+  const daysSinceCreated = createdDate ? dateDistance(reference, createdDate) : 999;
+  const isNewcomer = createdDate ? daysSinceCreated >= 0 && daysSinceCreated <= 60 : totalSessions <= 4;
 
   let category: PastoralTriageCategory = 'regular_active';
   let reason = 'حضور مستقر ومستمر';
@@ -343,13 +339,13 @@ export function evaluateYouthPastoralRisk(
     priorityScore = 100 + consecutiveAbsences * 5;
   }
   // Rule B: Newcomer Risk (newcomer attended 1-2 times, then missed 2 consecutive sessions)
-  else if (isNewcomer && consecutiveAbsences >= 2) {
+  else if (isNewcomer && memberAttendance.some(a => a.status === 'present') && consecutiveAbsences >= 2) {
     category = 'newcomer_risk';
     reason = 'مخدوم جديد في نافذة التثبيت الأولى؛ غاب عن آخر أسبوعين ويخشى انقطاعه الدائم';
     priorityScore = 85;
   }
   // Rule C: Fading Regular (historical rate >= 70% or total >= 6, but recent 6 weeks < 45%)
-  else if (totalSessions >= 6 && historicalRate >= 65 && recentRate <= 40) {
+  else if (historical.length >= 6 && recent.length === 6 && historicalRate >= 65 && recentRate <= 40) {
     category = 'fading_regular';
     reason = `فتور تدريجي: كان التزامه (${historicalRate}%) وتراجع مؤخراً إلى (${recentRate}%)`;
     priorityScore = 65;

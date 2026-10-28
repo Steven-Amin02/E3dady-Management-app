@@ -1,30 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Tajawal } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-
-const cairo = Cairo({
-  subsets: ["arabic"],
-  variable: "--font-cairo",
-  weight: ["400", "700"],
-  display: "swap",
-  preload: true,
-});
-
-const tajawal = Tajawal({
-  subsets: ["arabic"],
-  variable: "--font-tajawal",
-  weight: ["400", "700"],
-  display: "swap",
-  preload: false,
-});
 
 export const viewport: Viewport = {
   themeColor: "#0284c7",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export const metadata: Metadata = {
@@ -48,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning className={`${cairo.variable} ${tajawal.variable} font-cairo antialiased`}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning className="font-cairo antialiased">
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
